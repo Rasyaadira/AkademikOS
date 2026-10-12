@@ -107,18 +107,70 @@ export default function ScheduleCalendar({
   const [newStartTime, setNewStartTime] = useState("09.00");
   const [newEndTime, setNewEndTime] = useState("11.30");
 
-  const selectedDay = propSelectedDay !== undefined ? propSelectedDay : internalDay;
+  // Base anchor today: 1 Oktober 2026 (Kamis)
+  const BASE_TODAY = new Date(2026, 9, 1);
+  const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 9, 1));
+
+  const monthNames = [
+    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+  ];
+  const monthShort = [
+    "Jan", "Feb", "Mar", "Apr", "Mei", "Jun",
+    "Jul", "Ags", "Sep", "Okt", "Nov", "Des"
+  ];
+  const dayKeys = ["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"];
+  const dayLabels = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
+  const weekdayToKey = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
+
+  // Monday of the active week
+  const getMondayOfWeek = (d: Date) => {
+    const copy = new Date(d);
+    const day = copy.getDay();
+    const diff = day === 0 ? -6 : 1 - day;
+    copy.setDate(copy.getDate() + diff);
+    return copy;
+  };
+
+  const mondayDate = getMondayOfWeek(currentDate);
+  const sundayDate = new Date(mondayDate);
+  sundayDate.setDate(mondayDate.getDate() + 6);
+
+  // Dynamic 7 days of the active week
+  const daysList = dayKeys.map((key, idx) => {
+    const d = new Date(mondayDate);
+    d.setDate(mondayDate.getDate() + idx);
+    const isToday =
+      d.getFullYear() === BASE_TODAY.getFullYear() &&
+      d.getMonth() === BASE_TODAY.getMonth() &&
+      d.getDate() === BASE_TODAY.getDate();
+
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const dateStr = `${yyyy}-${mm}-${dd}`;
+
+    return {
+      key,
+      label: dayLabels[idx],
+      date: `${d.getDate()} ${monthShort[d.getMonth()]}`,
+      dayNum: d.getDate(),
+      fullDate: d,
+      dateStr,
+      isToday,
+    };
+  });
+
+  const dayKeyToDateStr: Record<string, string> = Object.fromEntries(
+    daysList.map((d) => [d.key, d.dateStr])
+  );
+
+  const activeDayKey = weekdayToKey[currentDate.getDay()] || "kamis";
+  const selectedDay = propSelectedDay !== undefined ? propSelectedDay : activeDayKey;
   const setSelectedDay = propOnSelectDay || setInternalDay;
 
-  const dayKeyToDateStr: Record<string, string> = {
-    senin: "2026-09-28",
-    selasa: "2026-09-29",
-    rabu: "2026-09-30",
-    kamis: "2026-10-01",
-    jumat: "2026-10-02",
-    sabtu: "2026-10-03",
-    minggu: "2026-10-04",
-  };
+  const currentDayIndex = dayKeys.indexOf(selectedDay);
+  const activeDayObj = daysList[currentDayIndex >= 0 ? currentDayIndex : 3];
 
   const getTaskHour = (t: TaskItem): number => {
     const match = (t.deadlineLabel || "").match(/(\d{1,2})[:.](\d{2})/);
@@ -126,29 +178,72 @@ export default function ScheduleCalendar({
     return 23;
   };
 
-  const daysList = [
-    { key: "senin", label: "Senin", date: "28 Sep", dayNum: 28 },
-    { key: "selasa", label: "Selasa", date: "29 Sep", dayNum: 29 },
-    { key: "rabu", label: "Rabu", date: "30 Sep", dayNum: 30 },
-    { key: "kamis", label: "Kamis", date: "1 Okt", dayNum: 1 },
-    { key: "jumat", label: "Jumat", date: "2 Okt", dayNum: 2 },
-    { key: "sabtu", label: "Sabtu", date: "3 Okt", dayNum: 3 },
-    { key: "minggu", label: "Minggu", date: "4 Okt", dayNum: 4 },
-  ];
-
-  const currentDayIndex = daysList.findIndex((d) => d.key === selectedDay);
-  const activeDayObj = daysList[currentDayIndex >= 0 ? currentDayIndex : 3];
-
-  // Navigation handlers (tombol kanan kiri)
+  // Navigation handlers (tombol kanan kiri):
+  // 1 hari lompat 1 hari, 7 hari lompat 7 hari, 1 bulan lompat 1 bulan
   const handlePrevDay = () => {
-    const nextIdx = (currentDayIndex - 1 + daysList.length) % daysList.length;
-    setSelectedDay(daysList[nextIdx].key);
+    const nextDate = new Date(currentDate);
+    if (viewMode === "1hari") {
+      nextDate.setDate(currentDate.getDate() - 1);
+    } else if (viewMode === "7hari") {
+      nextDate.setDate(currentDate.getDate() - 7);
+    } else {
+      nextDate.setMonth(currentDate.getMonth() - 1);
+    }
+    setCurrentDate(nextDate);
+    if (propOnSelectDay) {
+      propOnSelectDay(weekdayToKey[nextDate.getDay()]);
+    }
   };
 
   const handleNextDay = () => {
-    const nextIdx = (currentDayIndex + 1) % daysList.length;
-    setSelectedDay(daysList[nextIdx].key);
+    const nextDate = new Date(currentDate);
+    if (viewMode === "1hari") {
+      nextDate.setDate(currentDate.getDate() + 1);
+    } else if (viewMode === "7hari") {
+      nextDate.setDate(currentDate.getDate() + 7);
+    } else {
+      nextDate.setMonth(currentDate.getMonth() + 1);
+    }
+    setCurrentDate(nextDate);
+    if (propOnSelectDay) {
+      propOnSelectDay(weekdayToKey[nextDate.getDay()]);
+    }
   };
+
+  const handleJumpToToday = () => {
+    const today = new Date(2026, 9, 1);
+    setCurrentDate(today);
+    if (propOnSelectDay) {
+      propOnSelectDay("kamis");
+    }
+  };
+
+  // Check if current view is looking at today
+  const isViewingToday = (() => {
+    if (viewMode === "1hari") {
+      return (
+        currentDate.getFullYear() === BASE_TODAY.getFullYear() &&
+        currentDate.getMonth() === BASE_TODAY.getMonth() &&
+        currentDate.getDate() === BASE_TODAY.getDate()
+      );
+    }
+    if (viewMode === "7hari") {
+      return BASE_TODAY >= mondayDate && BASE_TODAY <= sundayDate;
+    }
+    return (
+      currentDate.getFullYear() === BASE_TODAY.getFullYear() &&
+      currentDate.getMonth() === BASE_TODAY.getMonth()
+    );
+  })();
+
+  const isSelectedDateToday =
+    currentDate.getFullYear() === BASE_TODAY.getFullYear() &&
+    currentDate.getMonth() === BASE_TODAY.getMonth() &&
+    currentDate.getDate() === BASE_TODAY.getDate();
+
+  // Academic week estimation
+  const semesterStart = new Date(2026, 8, 7);
+  const diffWeeks = Math.max(1, Math.floor((mondayDate.getTime() - semesterStart.getTime()) / (7 * 86400000)) + 1);
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -234,9 +329,6 @@ export default function ScheduleCalendar({
   // Filter schedules for the selected day in 1-day view
   const daySchedules = schedules.filter((s) => s.day === selectedDay);
 
-  // Weekday map for Month view
-  const weekdayToKey = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
-
   return (
     <div
       className={`bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs flex flex-col relative ${
@@ -303,9 +395,9 @@ export default function ScheduleCalendar({
             {viewMode === "1hari" && (
               <div className="flex items-center gap-1.5">
                 <span className="text-xs sm:text-sm font-bold text-m3-on-surface">
-                  {activeDayObj.label}, {activeDayObj.date} 2026
+                  {activeDayObj.label}, {activeDayObj.date} {currentDate.getFullYear()}
                 </span>
-                {activeDayObj.key === "kamis" && (
+                {isSelectedDateToday && (
                   <span className="text-xs font-normal text-m3-secondary">
                     (Hari ini)
                   </span>
@@ -316,10 +408,10 @@ export default function ScheduleCalendar({
             {viewMode === "7hari" && (
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-bold text-m3-on-surface">
-                  Pekan Kuliah: 28 Sep – 4 Okt 2026
+                  Pekan Kuliah: {mondayDate.getDate()} {monthShort[mondayDate.getMonth()]} – {sundayDate.getDate()} {monthShort[sundayDate.getMonth()]} {sundayDate.getFullYear()}
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-m3-secondary-container text-m3-on-secondary-container">
-                  Minggu 4
+                  Minggu {diffWeeks}
                 </span>
               </div>
             )}
@@ -327,7 +419,7 @@ export default function ScheduleCalendar({
             {viewMode === "1bulan" && (
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-bold text-m3-on-surface">
-                  Oktober 2026
+                  {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-m3-primary text-m3-on-primary">
                   Semester Gasal
@@ -347,7 +439,7 @@ export default function ScheduleCalendar({
             </button>
           </div>
 
-          {/* Right Action Bar: Filter Dropdown + Tambah Jadwal + Lompat Hari Ini */}
+          {/* Right Action Bar: Filter Dropdown + Hari Ini (di samping filter) + Tambah Jadwal */}
           <div className="flex items-center gap-2 flex-wrap">
             {/* Filter Dropdown Popover */}
             <div className="relative">
@@ -397,6 +489,17 @@ export default function ScheduleCalendar({
               )}
             </div>
 
+            {/* Quick Jump to Today: Hanya tampil jika TIDAK di hari ini, tepat di samping Filter */}
+            {!isViewingToday && (
+              <button
+                type="button"
+                onClick={handleJumpToToday}
+                className="text-[11px] font-semibold px-3 py-1 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-high border border-m3-outline-variant text-m3-primary hover:text-m3-on-surface transition-colors shadow-2xs"
+              >
+                Hari Ini
+              </button>
+            )}
+
             {/* Tombol + Tambah Jadwal */}
             <button
               type="button"
@@ -406,15 +509,6 @@ export default function ScheduleCalendar({
             >
               <Plus className="w-3.5 h-3.5" />
               <span>Tambah Matkul</span>
-            </button>
-
-            {/* Quick Jump to Today button */}
-            <button
-              type="button"
-              onClick={() => setSelectedDay("kamis")}
-              className="text-[11px] font-semibold px-3 py-1 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-high border border-m3-outline-variant text-m3-secondary hover:text-m3-on-surface transition-colors"
-            >
-              Hari Ini
             </button>
           </div>
         </div>
@@ -719,87 +813,123 @@ export default function ScheduleCalendar({
               <div>Sab</div>
             </div>
 
-            {/* 35 Calendar Cells (5 rows of 7 days) */}
-            <div className="grid grid-cols-7 flex-1 min-h-[360px]">
-              {/* Previous month days: Sep 27, 28, 29, 30 */}
-              {[
-                { d: 27, isCurr: false },
-                { d: 28, isCurr: false },
-                { d: 29, isCurr: false },
-                { d: 30, isCurr: false },
-              ].map((item, i) => (
-                <div
-                  key={`prev-${i}`}
-                  className="border-b border-r border-m3-outline-variant/60 p-1.5 min-h-[72px] bg-slate-50/50"
-                >
-                  <span className="text-[11px] text-m3-secondary/40 font-medium">{item.d}</span>
-                </div>
-              ))}
+            {/* Calendar Cells for currentDate's month */}
+            {(() => {
+              const calYear = currentDate.getFullYear();
+              const calMonth = currentDate.getMonth();
+              const firstDayOfWeek = new Date(calYear, calMonth, 1).getDay(); // 0 is Min, 1 is Sen...
+              const totalDaysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+              const prevMonthTotalDays = new Date(calYear, calMonth, 0).getDate();
 
-              {/* October days: 1 to 31 */}
-              {Array.from({ length: 31 }, (_, i) => i + 1).map((date) => {
-                const isToday = date === 1;
-                const isOct1 = date === 1;
+              const prevMonthDays = Array.from({ length: firstDayOfWeek }, (_, i) => ({
+                d: prevMonthTotalDays - firstDayOfWeek + 1 + i,
+                isCurr: false,
+              }));
 
-                const jsDate = new Date(2026, 9, date);
-                const dayIndex = jsDate.getDay();
-                const dayKey = weekdayToKey[dayIndex];
+              const nextMonthDaysCount = (7 - ((firstDayOfWeek + totalDaysInMonth) % 7)) % 7;
+              const nextMonthDays = Array.from({ length: nextMonthDaysCount }, (_, i) => ({
+                d: i + 1,
+                isCurr: false,
+              }));
 
-                const dayClasses = filterCourses ? schedules.filter((s) => s.day === dayKey) : [];
-                const datePadded = `2026-10-${String(date).padStart(2, "0")}`;
-                const dayTasks = filterTasks ? tasks.filter((t) => t.deadlineDate.startsWith(datePadded)) : [];
-
-                return (
-                  <div
-                    key={`curr-${date}`}
-                    onClick={() => setSelectedDay(dayKey)}
-                    className="border-b border-r border-m3-outline-variant/60 p-1.5 min-h-[72px] flex flex-col justify-between hover:bg-slate-50/80 transition-colors cursor-pointer group"
-                  >
-                    <div className="flex items-center justify-between">
-                      {isToday ? (
-                        <span className="w-5 h-5 rounded-full bg-m3-primary text-m3-on-primary text-[11px] font-bold flex items-center justify-center">
-                          {date}
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-m3-on-surface font-medium group-hover:font-bold">
-                          {isOct1 ? `1 Okt` : date}
-                        </span>
-                      )}
+              return (
+                <div className="grid grid-cols-7 flex-1 min-h-[360px]">
+                  {/* Previous month trailing days */}
+                  {prevMonthDays.map((item, i) => (
+                    <div
+                      key={`prev-${i}`}
+                      className="border-b border-r border-m3-outline-variant/60 p-1.5 min-h-[72px] bg-slate-50/50"
+                    >
+                      <span className="text-[11px] text-m3-secondary/40 font-medium">{item.d}</span>
                     </div>
+                  ))}
 
-                    {/* Actual Course and Task Items with Specific Colors */}
-                    <div className="space-y-1 mt-1 flex-1 overflow-hidden">
-                      {dayClasses.map((cl) => {
-                        const badgeColor = getCourseBadgeColor(cl.course);
-                        return (
-                          <div
-                            key={cl.id}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleCardClick(e, cl);
-                            }}
-                            className={`px-1.5 py-0.5 rounded text-[9px] font-bold truncate border transition-colors ${badgeColor}`}
-                            title={`${cl.course} (${cl.startTime} - ${cl.endTime} WIB) - Klik untuk edit`}
-                          >
-                            {cl.course}
-                          </div>
-                        );
-                      })}
+                  {/* Current month days */}
+                  {Array.from({ length: totalDaysInMonth }, (_, i) => i + 1).map((date) => {
+                    const isToday =
+                      calYear === BASE_TODAY.getFullYear() &&
+                      calMonth === BASE_TODAY.getMonth() &&
+                      date === BASE_TODAY.getDate();
 
-                      {dayTasks.map((tk) => (
-                        <div
-                          key={tk.id}
-                          className="px-1.5 py-0.5 rounded bg-red-100 text-red-800 border border-red-200 text-[9px] font-bold truncate"
-                          title={`Tenggat: ${tk.title}`}
-                        >
-                          Tenggat: {tk.title}
+                    const jsDate = new Date(calYear, calMonth, date);
+                    const dayIndex = jsDate.getDay();
+                    const dayKey = weekdayToKey[dayIndex];
+
+                    const dayClasses = filterCourses ? schedules.filter((s) => s.day === dayKey) : [];
+                    const datePadded = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
+                    const dayTasks = filterTasks
+                      ? tasks.filter((t) => t.deadlineDate.startsWith(datePadded) || t.deadlineDate.toLowerCase().includes(datePadded))
+                      : [];
+
+                    return (
+                      <div
+                        key={`curr-${date}`}
+                        onClick={() => {
+                          const clickedDate = new Date(calYear, calMonth, date);
+                          setCurrentDate(clickedDate);
+                          if (propOnSelectDay) {
+                            propOnSelectDay(dayKey);
+                          }
+                        }}
+                        className="border-b border-r border-m3-outline-variant/60 p-1.5 min-h-[72px] flex flex-col justify-between hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                      >
+                        <div className="flex items-center justify-between">
+                          {isToday ? (
+                            <span className="w-5 h-5 rounded-full bg-m3-primary text-m3-on-primary text-[11px] font-bold flex items-center justify-center">
+                              {date}
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-m3-on-surface font-medium group-hover:font-bold">
+                              {date === 1 ? `${date} ${monthShort[calMonth]}` : date}
+                            </span>
+                          )}
                         </div>
-                      ))}
+
+                        {/* Actual Course and Task Items with Specific Colors */}
+                        <div className="space-y-1 mt-1 flex-1 overflow-hidden">
+                          {dayClasses.map((cl) => {
+                            const badgeColor = getCourseBadgeColor(cl.course);
+                            return (
+                              <div
+                                key={cl.id}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCardClick(e, cl);
+                                }}
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold truncate border transition-colors ${badgeColor}`}
+                                title={`${cl.course} (${cl.startTime} - ${cl.endTime} WIB) - Klik untuk edit`}
+                              >
+                                {cl.course}
+                              </div>
+                            );
+                          })}
+
+                          {dayTasks.map((tk) => (
+                            <div
+                              key={tk.id}
+                              className="px-1.5 py-0.5 rounded bg-red-100 text-red-800 border border-red-200 text-[9px] font-bold truncate"
+                              title={`Tenggat: ${tk.title}`}
+                            >
+                              Tenggat: {tk.title}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Next month leading days */}
+                  {nextMonthDays.map((item, i) => (
+                    <div
+                      key={`next-${i}`}
+                      className="border-b border-r border-m3-outline-variant/60 p-1.5 min-h-[72px] bg-slate-50/50"
+                    >
+                      <span className="text-[11px] text-m3-secondary/40 font-medium">{item.d}</span>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

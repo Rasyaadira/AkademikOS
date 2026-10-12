@@ -12,6 +12,7 @@ import {
   Settings,
   Layers,
   ChevronRight,
+  UserCheck,
 } from "lucide-react";
 import { StudentProfile } from "./OtherViews";
 
@@ -29,6 +30,8 @@ interface SidebarProps {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   profile?: StudentProfile;
+  currentUserId?: string;
+  onOpenLogin?: () => void;
 }
 
 interface NavItem {
@@ -55,8 +58,13 @@ export default function Sidebar({
   activeTab,
   onSelectTab,
   profile,
+  currentUserId = "student-clean",
+  onOpenLogin,
 }: SidebarProps) {
-  const studentName = profile?.name || "Faras Pratama";
+  const isCleanAccount = currentUserId === "student-clean";
+  const studentName = isCleanAccount
+    ? "Mahasiswa (Akun Bersih)"
+    : profile?.name || "Faras Pratama";
   const studentMajor = profile?.major || "Teknik Informatika";
   const studentSemester = profile?.semester || 5;
   const initials = studentName
@@ -91,7 +99,7 @@ export default function Sidebar({
               <button
                 key={item.id}
                 onClick={() => onSelectTab(item.id)}
-                className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-full text-sm transition-colors text-left ${
+                className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-full text-sm transition-colors text-left min-h-[44px] ${
                   isActive
                     ? "bg-m3-primary text-m3-on-primary font-medium shadow-xs"
                     : "text-m3-on-surface hover:bg-m3-surface-container-high"
@@ -114,7 +122,7 @@ export default function Sidebar({
             <button
               key={item.id}
               onClick={() => onSelectTab(item.id)}
-              className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-full text-sm transition-colors text-left ${
+              className={`w-full flex items-center gap-3.5 px-4 py-2.5 rounded-full text-sm transition-colors text-left min-h-[44px] ${
                 isActive
                   ? "bg-m3-primary text-m3-on-primary font-medium shadow-xs"
                   : "text-m3-on-surface hover:bg-m3-surface-container-high"
@@ -126,28 +134,45 @@ export default function Sidebar({
           );
         })}
 
-        {/* Realistic Single Student Mini Profile */}
+        {/* Student Mini Profile Card */}
         <div
           onClick={() => onSelectTab("akun")}
-          className="mt-3 p-3 bg-m3-surface-container-low rounded-2xl border border-m3-outline-variant flex items-center justify-between cursor-pointer hover:bg-m3-surface-container transition-all group"
+          className="mt-3 p-3 bg-m3-surface-container-low rounded-2xl border border-m3-outline-variant flex items-center justify-between cursor-pointer hover:bg-m3-surface-container transition-all group min-h-[52px]"
           title="Buka Pengaturan Akun Mahasiswa"
         >
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-8 h-8 rounded-full bg-m3-primary text-m3-on-primary flex items-center justify-center font-bold text-xs flex-shrink-0">
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 ${
+              isCleanAccount ? "bg-amber-600 text-white" : "bg-m3-primary text-m3-on-primary"
+            }`}>
               {initials}
             </div>
             <div className="overflow-hidden">
-              <p className="text-xs font-bold text-m3-on-surface truncate group-hover:text-m3-primary transition-colors">
-                {studentName}
-              </p>
-              <p className="text-[11px] text-m3-secondary truncate">
-                {studentMajor} • Sem. {studentSemester}
+              <div className="flex items-center gap-1.5">
+                <p className="text-xs font-bold text-m3-on-surface truncate group-hover:text-m3-primary transition-colors">
+                  {studentName}
+                </p>
+              </div>
+              <p className="text-[10px] text-m3-secondary truncate">
+                {isCleanAccount ? "Mode Uji Bersih (Kosong)" : `${studentMajor} • Sem. ${studentSemester}`}
               </p>
             </div>
           </div>
 
           <ChevronRight className="w-4 h-4 text-m3-secondary group-hover:text-m3-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
         </div>
+
+        {/* Quick Switch / Reset Account Button */}
+        {onOpenLogin && (
+          <button
+            type="button"
+            onClick={onOpenLogin}
+            className="w-full mt-2 py-2 px-3 rounded-xl bg-m3-surface-container hover:bg-m3-surface-container-high border border-m3-outline-variant text-[11px] font-bold text-m3-on-surface flex items-center justify-center gap-1.5 transition-colors min-h-[44px]"
+            title="Ganti persona atau kosongkan data uji"
+          >
+            <UserCheck className="w-3.5 h-3.5 text-m3-primary" />
+            <span>Ganti / Reset Akun</span>
+          </button>
+        )}
       </div>
     </aside>
   );

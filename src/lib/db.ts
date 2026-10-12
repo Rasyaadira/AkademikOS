@@ -8,9 +8,18 @@ if (!fs.existsSync(dbDir)) {
 }
 
 const dbPath = path.join(dbDir, "akademikos.db");
-const db = new Database(dbPath);
+
+const globalForDb = globalThis as unknown as {
+  db: InstanceType<typeof Database> | undefined;
+};
+
+const db = globalForDb.db ?? new Database(dbPath);
 db.pragma("journal_mode = WAL");
-db.pragma("busy_timeout = 5000");
+db.pragma("busy_timeout = 10000");
+
+if (process.env.NODE_ENV !== "production") {
+  globalForDb.db = db;
+}
 
 // ==========================================
 // FULL ACADEMIC OS SCHEMA (11 TABLES)
@@ -218,6 +227,7 @@ export function seedFullDatabase() {
     insertUser.run("student-1", "Faras Pratama", "23/512948/TK/54321", "faras.pratama@mail.ugm.ac.id", "FR");
     insertUser.run("student-2", "Arya Wicaksono", "23/514210/TK/55123", "arya.wicaksono@mail.ugm.ac.id", "AW");
     insertUser.run("student-3", "Nabila Putri", "23/516789/TK/56234", "nabila.putri@mail.ugm.ac.id", "NP");
+    insertUser.run("student-clean", "Mahasiswa Baru (Akun Kosong)", "23/------/TK/00000", "mahasiswa@mail.ugm.ac.id", "MB");
 
     // 2. Profiles
     const insertProfile = db.prepare(`
@@ -227,6 +237,7 @@ export function seedFullDatabase() {
     insertProfile.run("student-1", "Faras Pratama", "23/512948/TK/54321", "faras.pratama@mail.ugm.ac.id", "Teknik Informatika", "Fakultas Teknik", "Universitas Gadjah Mada", 5, "Dr. Ir. Budi Santoso, M.Kom.", "3.85", 24);
     insertProfile.run("student-2", "Arya Wicaksono", "23/514210/TK/55123", "arya.wicaksono@mail.ugm.ac.id", "Teknik Komputer", "Fakultas Teknik", "Universitas Gadjah Mada", 5, "Dr. Ahmad Fauzi, M.T.", "3.75", 22);
     insertProfile.run("student-3", "Nabila Putri", "23/516789/TK/56234", "nabila.putri@mail.ugm.ac.id", "Teknik Informatika", "Fakultas Teknik", "Universitas Gadjah Mada", 3, "Siti Rahmawati, S.Kom., M.Cs.", "3.90", 24);
+    insertProfile.run("student-clean", "Mahasiswa Baru (Akun Kosong)", "23/------/TK/00000", "mahasiswa@mail.ugm.ac.id", "Teknik Informatika", "Fakultas Teknik", "Universitas Gadjah Mada", 5, "—", "3.80", 24);
 
     // 3. Lecturers
     const insertLecturer = db.prepare(`
@@ -616,11 +627,23 @@ export function seedFullDatabase() {
   console.log("Database seeded successfully with full 11-table academic schema and rich dummy data!");
 }
 
-// Auto seed if empty or outdated
-const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
-const taskCount = db.prepare("SELECT COUNT(*) as count FROM tasks WHERE user_id = 'student-1'").get() as { count: number };
-if (userCount.count === 0 || taskCount.count < 10) {
-  seedFullDatabase();
+// Reset specific student's tasks and schedule
+export function resetUserData(userId: string) {
+  const resetTx = db.transaction(() => {
+    db.prepare("DELETE FROM tasks WHERE user_id = ?").run(userId);
+    db.prepare("DELETE FROM schedule WHERE user_id = ?").run(userId);
+  });
+  resetTx();
+}
+
+// Auto seed only if database is completely empty
+try {
+  const userCount = db.prepare("SELECT COUNT(*) as count FROM users").get() as { count: number };
+  if (userCount.count === 0) {
+    seedFullDatabase();
+  }
+} catch (err) {
+  console.error("Auto-seed check error:", err);
 }
 
 export default db;

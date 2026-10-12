@@ -155,6 +155,7 @@ interface OtherViewsProps {
   onToggleTask?: (id: string) => void;
   onDeleteTask?: (id: string) => void;
   onOpenQuickTask?: () => void;
+  onUpdateTask?: (id: string, updated: Partial<TaskItem>) => void;
 }
 
 // Data structures for RPS Folder Tree & Document Preview (40/60)
@@ -423,6 +424,7 @@ export default function OtherViews({
   onToggleTask,
   onDeleteTask,
   onOpenQuickTask,
+  onUpdateTask,
 }: OtherViewsProps) {
   // Akun Step state
   const [akunStep, setAkunStep] = useState<1 | 2 | 3>(1);
@@ -456,6 +458,40 @@ export default function OtherViews({
     lmsUrl: "",
     attendanceStatus: "aman",
   });
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isNew: boolean = false) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const uploadData = new FormData();
+    uploadData.append("file", file);
+    try {
+      const res = await fetch("/api/upload", { method: "POST", body: uploadData });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.url) {
+          if (isNew) {
+            setNewLecturerForm((prev) => ({ ...prev, lecturerPhoto: data.url }));
+          } else if (editingLecturer) {
+            setEditingLecturer((prev) => prev ? { ...prev, lecturerPhoto: data.url } : null);
+          }
+          return;
+        }
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+    }
+    // Fallback to local data URL if server upload fails
+    const reader = new FileReader();
+    reader.onload = (uploadEvent) => {
+      const result = uploadEvent.target?.result as string;
+      if (isNew) {
+        setNewLecturerForm((prev) => ({ ...prev, lecturerPhoto: result }));
+      } else if (editingLecturer) {
+        setEditingLecturer((prev) => prev ? { ...prev, lecturerPhoto: result } : null);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSaveLecturerEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -640,6 +676,7 @@ export default function OtherViews({
               onToggleTask={onToggleTask || (() => {})}
               onDeleteTask={onDeleteTask || (() => {})}
               onOpenQuickTask={onOpenQuickTask}
+              onUpdateTask={onUpdateTask}
             />
           </div>
         </div>
@@ -1197,7 +1234,7 @@ export default function OtherViews({
 
       {/* TAB AKUN */}
       {activeTab === "akun" && (
-        <div className="max-w-2xl space-y-5">
+        <div className="max-w-2xl mx-auto space-y-5">
           {isSaved && (
             <div className="p-3.5 rounded-2xl bg-m3-tertiary text-m3-on-tertiary text-xs font-semibold flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
@@ -1422,12 +1459,12 @@ export default function OtherViews({
           </div>
 
           {/* Grid 3 Kolom Kartu Sesuai Sketsa */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
             {courseLecturers.map((c) => (
               <div
                 key={c.id}
                 onClick={() => setEditingLecturer(c)}
-                className="p-3.5 sm:p-4 rounded-3xl bg-white border border-m3-outline-variant hover:border-m3-primary/50 shadow-xs hover:shadow-sm transition-all flex gap-3.5 cursor-pointer group relative"
+                className="p-3.5 sm:p-4 rounded-3xl bg-white border border-m3-outline-variant hover:border-m3-primary/50 shadow-xs hover:shadow-sm transition-all flex gap-3.5 cursor-pointer group relative overflow-hidden"
               >
                 {/* KIRI: FOTO DOSEN PERSEGI PANJANG / POTRET SESUAI SKETSA */}
                 <div className="w-20 sm:w-24 h-28 sm:h-32 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 flex-shrink-0 relative">
@@ -1470,7 +1507,7 @@ export default function OtherViews({
                   </div>
 
                   {/* Bawah: Status Presensi Tanpa Angka + Ikon Tombol (O O) */}
-                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between gap-1.5 mt-3 pt-2 border-t border-slate-100 flex-wrap">
                     {/* Status Presensi: Aman, Hmm..., Gawat, Bahaya */}
                     {c.attendanceStatus === "aman" && (
                       <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -1493,8 +1530,8 @@ export default function OtherViews({
                       </span>
                     )}
 
-                    {/* Ikon Aksi: WA & LMS (Hanya muncul jika datanya ada) */}
-                    <div className="flex items-center gap-1 flex-shrink-0">
+                    {/* Ikon Aksi: WA & LMS + Edit */}
+                    <div className="flex items-center gap-1.5 flex-shrink-0 ml-auto">
                       {c.whatsapp ? (
                         <a
                           href={`https://wa.me/${c.whatsapp}`}
@@ -1542,11 +1579,16 @@ export default function OtherViews({
           {/* MODAL EDIT DOSEN & MATKUL */}
           {editingLecturer && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-in fade-in">
-              <div className="bg-white rounded-3xl border border-m3-outline-variant p-6 w-full max-w-lg shadow-xl space-y-4">
+              <div className="bg-white rounded-3xl border border-m3-outline-variant p-6 w-full max-w-lg shadow-xl space-y-4 max-h-[90vh] overflow-y-auto">
                 <div className="flex items-center justify-between border-b pb-3">
-                  <h3 className="text-base font-bold text-m3-on-surface">
-                    Edit Profil Dosen & Mata Kuliah
-                  </h3>
+                  <div>
+                    <h3 className="text-base font-bold text-m3-on-surface">
+                      Edit Profil Dosen & Mata Kuliah
+                    </h3>
+                    <p className="text-[11px] text-m3-secondary">
+                      Perbarui foto pengajar, jadwal kuliah, kontak dosen, dan status presensi.
+                    </p>
+                  </div>
                   <button
                     type="button"
                     onClick={() => setEditingLecturer(null)}
@@ -1556,7 +1598,57 @@ export default function OtherViews({
                   </button>
                 </div>
 
-                <form onSubmit={handleSaveLecturerEdit} className="space-y-3.5 text-xs">
+                <form onSubmit={handleSaveLecturerEdit} className="space-y-4 text-xs">
+                  {/* Foto Dosen dengan Pratinjau & Upload */}
+                  <div className="flex items-center gap-4 p-3.5 bg-m3-surface-container/30 rounded-2xl border border-m3-outline-variant">
+                    <div className="w-20 h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-300 flex-shrink-0 relative">
+                      {editingLecturer.lecturerPhoto ? (
+                        <img
+                          src={editingLecturer.lecturerPhoto}
+                          alt={editingLecturer.lecturerName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-m3-secondary">
+                          <User className="w-8 h-8 opacity-40" />
+                          <span className="text-[9px] font-bold mt-1 text-center px-1">Tanpa Foto</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <p className="text-xs font-bold text-m3-on-surface">Foto Dosen (Potret)</p>
+                      <div className="flex items-center gap-2">
+                        <label className="px-3 py-1.5 rounded-xl bg-white border border-m3-outline text-[11px] font-bold text-m3-primary hover:bg-m3-surface-container cursor-pointer transition-colors shadow-xs">
+                          <span>Pilih Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handlePhotoUpload(e, false)}
+                          />
+                        </label>
+                        {editingLecturer.lecturerPhoto && (
+                          <button
+                            type="button"
+                            onClick={() => setEditingLecturer({ ...editingLecturer, lecturerPhoto: undefined })}
+                            className="px-2.5 py-1.5 rounded-xl text-[11px] text-red-600 hover:bg-red-50 border border-red-200 transition-colors"
+                          >
+                            Hapus Foto
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="url"
+                        value={editingLecturer.lecturerPhoto || ""}
+                        onChange={(e) =>
+                          setEditingLecturer({ ...editingLecturer, lecturerPhoto: e.target.value })
+                        }
+                        placeholder="Atau tautkan URL foto..."
+                        className="w-full p-2 text-[11px] rounded-xl border border-m3-outline bg-white focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     <label className="font-semibold text-m3-on-surface">Nama Mata Kuliah</label>
                     <input
@@ -1571,7 +1663,7 @@ export default function OtherViews({
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-semibold text-m3-on-surface">Nama Dosen & Gelar</label>
+                    <label className="font-semibold text-m3-on-surface">Nama Dosen & Gelar Lengkap</label>
                     <input
                       type="text"
                       value={editingLecturer.lecturerName}
@@ -1610,7 +1702,7 @@ export default function OtherViews({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-semibold text-m3-on-surface">Nomor WhatsApp (Aktif)</label>
+                      <label className="font-semibold text-m3-on-surface">Nomor WhatsApp Dosen</label>
                       <input
                         type="text"
                         value={editingLecturer.whatsapp || ""}
@@ -1635,37 +1727,23 @@ export default function OtherViews({
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="font-semibold text-m3-on-surface">Foto Dosen (URL)</label>
-                      <input
-                        type="url"
-                        value={editingLecturer.lecturerPhoto || ""}
-                        onChange={(e) =>
-                          setEditingLecturer({ ...editingLecturer, lecturerPhoto: e.target.value })
-                        }
-                        placeholder="https://images.unsplash.com/..."
-                        className="w-full p-2.5 rounded-xl border border-m3-outline bg-m3-surface-container/30 focus:outline-none focus:ring-2 focus:ring-m3-primary"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="font-semibold text-m3-on-surface">Status Presensi</label>
-                      <select
-                        value={editingLecturer.attendanceStatus || "aman"}
-                        onChange={(e) =>
-                          setEditingLecturer({
-                            ...editingLecturer,
-                            attendanceStatus: e.target.value as any,
-                          })
-                        }
-                        className="w-full p-2.5 rounded-xl border border-m3-outline bg-m3-surface-container/30 focus:outline-none focus:ring-2 focus:ring-m3-primary capitalize"
-                      >
-                        <option value="aman">Aman</option>
-                        <option value="hmm">Hmm...</option>
-                        <option value="gawat">Gawat</option>
-                        <option value="bahaya">Bahaya</option>
-                      </select>
-                    </div>
+                  <div className="space-y-1">
+                    <label className="font-semibold text-m3-on-surface">Status Presensi Kehadiran</label>
+                    <select
+                      value={editingLecturer.attendanceStatus || "aman"}
+                      onChange={(e) =>
+                        setEditingLecturer({
+                          ...editingLecturer,
+                          attendanceStatus: e.target.value as any,
+                        })
+                      }
+                      className="w-full p-2.5 rounded-xl border border-m3-outline bg-m3-surface-container/30 focus:outline-none focus:ring-2 focus:ring-m3-primary capitalize"
+                    >
+                      <option value="aman">Aman</option>
+                      <option value="hmm">Hmm...</option>
+                      <option value="gawat">Gawat</option>
+                      <option value="bahaya">Bahaya</option>
+                    </select>
                   </div>
 
                   <div className="flex items-center justify-between pt-3 border-t">
@@ -1674,7 +1752,7 @@ export default function OtherViews({
                       onClick={() => handleDeleteLecturer(editingLecturer.id)}
                       className="px-4 py-2 rounded-full text-red-600 hover:bg-red-50 font-bold transition-colors"
                     >
-                      Hapus
+                      Hapus Mata Kuliah
                     </button>
                     <div className="flex items-center gap-2">
                       <button
@@ -1714,7 +1792,57 @@ export default function OtherViews({
                   </button>
                 </div>
 
-                <form onSubmit={handleAddLecturer} className="space-y-3.5 text-xs">
+                <form onSubmit={handleAddLecturer} className="space-y-4 text-xs">
+                  {/* Foto Dosen dengan Pratinjau & Upload */}
+                  <div className="flex items-center gap-4 p-3.5 bg-m3-surface-container/30 rounded-2xl border border-m3-outline-variant">
+                    <div className="w-20 h-28 rounded-xl overflow-hidden bg-slate-100 border border-slate-300 flex-shrink-0 relative">
+                      {newLecturerForm.lecturerPhoto ? (
+                        <img
+                          src={newLecturerForm.lecturerPhoto}
+                          alt="Foto Baru"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-m3-secondary">
+                          <User className="w-8 h-8 opacity-40" />
+                          <span className="text-[9px] font-bold mt-1 text-center px-1">Tanpa Foto</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <p className="text-xs font-bold text-m3-on-surface">Foto Dosen (Potret)</p>
+                      <div className="flex items-center gap-2">
+                        <label className="px-3 py-1.5 rounded-xl bg-white border border-m3-outline text-[11px] font-bold text-m3-primary hover:bg-m3-surface-container cursor-pointer transition-colors shadow-xs">
+                          <span>Pilih Foto</span>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handlePhotoUpload(e, true)}
+                          />
+                        </label>
+                        {newLecturerForm.lecturerPhoto && (
+                          <button
+                            type="button"
+                            onClick={() => setNewLecturerForm({ ...newLecturerForm, lecturerPhoto: undefined })}
+                            className="px-2.5 py-1.5 rounded-xl text-[11px] text-red-600 hover:bg-red-50 border border-red-200 transition-colors"
+                          >
+                            Hapus Foto
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="url"
+                        value={newLecturerForm.lecturerPhoto || ""}
+                        onChange={(e) =>
+                          setNewLecturerForm({ ...newLecturerForm, lecturerPhoto: e.target.value })
+                        }
+                        placeholder="Atau tautkan URL foto..."
+                        className="w-full p-2 text-[11px] rounded-xl border border-m3-outline bg-white focus:outline-none focus:ring-1 focus:ring-m3-primary"
+                      />
+                    </div>
+                  </div>
+
                   <div className="space-y-1">
                     <label className="font-semibold text-m3-on-surface">Nama Mata Kuliah</label>
                     <input
@@ -1834,7 +1962,7 @@ export default function OtherViews({
 
       {/* TAB SETTING */}
       {activeTab === "setting" && (
-        <div className="space-y-4 max-w-lg">
+        <div className="space-y-4 max-w-2xl mx-auto">
           <div className="p-4 rounded-2xl bg-m3-surface-container border border-m3-outline-variant space-y-3">
             <h4 className="text-xs font-bold text-m3-on-surface">Arsitektur & Mesin Data</h4>
             <div className="p-3 rounded-xl bg-white border border-m3-outline-variant flex items-center justify-between">

@@ -9,19 +9,18 @@ import TaskList from "@/components/TaskList";
 import QuickTaskModal from "@/components/QuickTaskModal";
 import UploadDocModal from "@/components/UploadDocModal";
 import OtherViews, { StudentProfile } from "@/components/OtherViews";
-import LoginPage from "@/components/LoginPage";
 import { TaskItem } from "@/components/ActionDeck";
-import { Menu, X, CalendarDays, Database, UserCheck } from "lucide-react";
+import { Menu, X, CalendarDays } from "lucide-react";
 
 export default function HomeDashboard() {
   const [activeTab, setActiveTab] = useState<NavTab>("home");
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isQuickTaskOpen, setIsQuickTaskOpen] = useState(false);
   const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
-  const [showLoginPage, setShowLoginPage] = useState(false);
+  const [droppedFile, setDroppedFile] = useState<File | null>(null);
   
   // Current active student account ID in SQLite
-  const [currentUserId, setCurrentUserId] = useState<string>("student-1");
+  const [currentUserId] = useState<string>("student-1");
 
   // Data states connected to SQLite DB
   const [tasks, setTasks] = useState<TaskItem[]>([]);
@@ -73,10 +72,23 @@ export default function HomeDashboard() {
     loadUserData(currentUserId);
   }, [currentUserId]);
 
-  const handleSwitchAccount = (newUserId: string) => {
-    setCurrentUserId(newUserId);
-    setBannerNotice(`Beralih ke akun ${newUserId} (Data terpisah tersimpan di SQLite).`);
-    setTimeout(() => setBannerNotice(null), 3500);
+  // Update task attributes and persist to DB
+  const handleUpdateTask = async (id: string, updated: Partial<TaskItem>) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updated } : t))
+    );
+    setBannerNotice(`Tugas "${updated.title || "tugas"}" berhasil diperbarui.`);
+    setTimeout(() => setBannerNotice(null), 3000);
+
+    try {
+      await fetch(`/api/tasks/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updated),
+      });
+    } catch (err) {
+      console.error("Failed to update task in DB:", err);
+    }
   };
 
   // Toggle task completion and persist to DB
@@ -243,8 +255,8 @@ export default function HomeDashboard() {
 
   // Direct Drag and Drop file handler
   const handleDirectFileDrop = (file: File) => {
-    setBannerNotice(`Dokumen "${file.name}" berhasil diunggah langsung via drag & drop!`);
-    setTimeout(() => setBannerNotice(null), 5000);
+    setDroppedFile(file);
+    setIsUploadDocOpen(true);
   };
 
   const handleUploadSuccess = (info: { fileName: string; docType: string }) => {
@@ -279,9 +291,6 @@ export default function HomeDashboard() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           profile={profile}
-          currentUserId={currentUserId}
-          onSwitchAccount={handleSwitchAccount}
-          onOpenLogin={() => setShowLoginPage(true)}
         />
       </div>
 
@@ -300,12 +309,6 @@ export default function HomeDashboard() {
                 setMobileSidebarOpen(false);
               }}
               profile={profile}
-              currentUserId={currentUserId}
-              onSwitchAccount={handleSwitchAccount}
-              onOpenLogin={() => {
-                setMobileSidebarOpen(false);
-                setShowLoginPage(true);
-              }}
             />
           </div>
         </div>
@@ -381,6 +384,7 @@ export default function HomeDashboard() {
                   tasks={tasks}
                   onToggleTask={handleToggleTask}
                   onDeleteTask={handleDeleteTask}
+                  onUpdateTask={handleUpdateTask}
                 />
               </div>
             </div>
@@ -400,6 +404,7 @@ export default function HomeDashboard() {
             onToggleTask={handleToggleTask}
             onDeleteTask={handleDeleteTask}
             onOpenQuickTask={() => setIsQuickTaskOpen(true)}
+            onUpdateTask={handleUpdateTask}
           />
         )}
       </main>
@@ -413,20 +418,13 @@ export default function HomeDashboard() {
 
       <UploadDocModal
         isOpen={isUploadDocOpen}
-        onClose={() => setIsUploadDocOpen(false)}
+        onClose={() => {
+          setIsUploadDocOpen(false);
+          setDroppedFile(null);
+        }}
         onUploadSuccess={handleUploadSuccess}
+        initialFile={droppedFile}
       />
-
-      {/* Login / SSO Persona Modal */}
-      {showLoginPage && (
-        <LoginPage
-          onLogin={(userId) => {
-            handleSwitchAccount(userId);
-            setShowLoginPage(false);
-          }}
-          onClose={() => setShowLoginPage(false)}
-        />
-      )}
     </div>
   );
 }

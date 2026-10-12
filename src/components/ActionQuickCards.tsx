@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef } from "react";
-import { Plus, ArrowUp } from "lucide-react";
+import { CheckSquare, FileText } from "lucide-react";
 
 interface ActionQuickCardsProps {
   onOpenQuickTask: () => void;
@@ -57,19 +57,19 @@ export default function ActionQuickCards({
         className="hidden"
       />
 
-      {/* Card 1: + Tugas (Clean, Subtitle Removed per User Request) */}
+      {/* Card 1: Tugas (Tanpa tanda + dan tanpa kata upload) */}
       <button
         type="button"
         onClick={onOpenQuickTask}
         className="h-full min-h-[140px] bg-m3-primary text-m3-on-primary rounded-3xl p-4 flex flex-col items-center justify-center text-center transition-all hover:scale-[1.02] active:scale-95 shadow-xs border border-indigo-200/50 group"
       >
-        <div className="w-12 h-12 rounded-full bg-white/40 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-          <Plus className="w-7 h-7 text-m3-on-primary stroke-[2.5]" />
+        <div className="w-12 h-12 rounded-full bg-white/30 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+          <CheckSquare className="w-6 h-6 text-m3-on-primary stroke-[2.2]" />
         </div>
-        <span className="font-bold text-sm tracking-tight">+ Tugas</span>
+        <span className="font-bold text-sm tracking-tight">Tugas</span>
       </button>
 
-      {/* Card 2: ^ Dokumen (Clean, Subtitle Removed per User Request, Direct Drag & Drop Retained) */}
+      {/* Card 2: Dokumen (Tanpa tanda panah upload / +, Direct Drag & Drop Retained) */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -88,9 +88,9 @@ export default function ActionQuickCards({
         }`}
       >
         <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center mb-2">
-          <ArrowUp className="w-7 h-7 text-white stroke-[2.5]" />
+          <FileText className="w-6 h-6 text-white stroke-[2.2]" />
         </div>
-        <span className="font-bold text-sm tracking-tight">↑ Dokumen</span>
+        <span className="font-bold text-sm tracking-tight">Dokumen</span>
       </div>
     </div>
   );

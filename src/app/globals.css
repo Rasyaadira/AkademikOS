@@ -1,0 +1,96 @@
+@import "tailwindcss";
+
+:root {
+  --md-sys-color-surface: #F8FAFC;
+  --md-sys-color-on-surface: #1E293B;
+  --md-sys-color-surface-container-low: #FFFFFF;
+  --md-sys-color-surface-container: #F1F5F9;
+  --md-sys-color-surface-container-high: #E2E8F0;
+  --md-sys-color-surface-container-highest: #CBD5E1;
+  
+  --md-sys-color-primary: #9DACFF;
+  --md-sys-color-on-primary: #101828;
+  --md-sys-color-primary-container: #EEF2FF;
+  --md-sys-color-on-primary-container: #1E1B4B;
+  
+  --md-sys-color-secondary: #5B616A;
+  --md-sys-color-on-secondary: #FFFFFF;
+  --md-sys-color-secondary-container: #E2E8F0;
+  --md-sys-color-on-secondary-container: #1E293B;
+  
+  --md-sys-color-tertiary: #CBF7ED;
+  --md-sys-color-on-tertiary: #064E3B;
+  --md-sys-color-tertiary-container: #E6FAF6;
+  --md-sys-color-on-tertiary-container: #064E3B;
+  
+  --md-sys-color-outline: #CBD5E1;
+  --md-sys-color-outline-variant: #E2E8F0;
+  --md-sys-color-error: #BA1A1A;
+  --md-sys-color-on-error: #FFFFFF;
+  --md-sys-color-error-container: #FFEDEA;
+  --md-sys-color-on-error-container: #410002;
+}
+
+@theme {
+  --color-m3-surface: var(--md-sys-color-surface);
+  --color-m3-on-surface: var(--md-sys-color-on-surface);
+  --color-m3-surface-container-low: var(--md-sys-color-surface-container-low);
+  --color-m3-surface-container: var(--md-sys-color-surface-container);
+  --color-m3-surface-container-high: var(--md-sys-color-surface-container-high);
+  --color-m3-surface-container-highest: var(--md-sys-color-surface-container-highest);
+
+  --color-m3-primary: var(--md-sys-color-primary);
+  --color-m3-on-primary: var(--md-sys-color-on-primary);
+  --color-m3-primary-container: var(--md-sys-color-primary-container);
+  --color-m3-on-primary-container: var(--md-sys-color-on-primary-container);
+
+  --color-m3-secondary: var(--md-sys-color-secondary);
+  --color-m3-on-secondary: var(--md-sys-color-on-secondary);
+  --color-m3-secondary-container: var(--md-sys-color-secondary-container);
+  --color-m3-on-secondary-container: var(--md-sys-color-on-secondary-container);
+
+  --color-m3-tertiary: var(--md-sys-color-tertiary);
+  --color-m3-on-tertiary: var(--md-sys-color-on-tertiary);
+  --color-m3-tertiary-container: var(--md-sys-color-tertiary-container);
+  --color-m3-on-tertiary-container: var(--md-sys-color-on-tertiary-container);
+
+  --color-m3-outline: var(--md-sys-color-outline);
+  --color-m3-outline-variant: var(--md-sys-color-outline-variant);
+
+  --color-m3-error: var(--md-sys-color-error);
+  --color-m3-on-error: var(--md-sys-color-on-error);
+  --color-m3-error-container: var(--md-sys-color-error-container);
+  --color-m3-on-error-container: var(--md-sys-color-on-error-container);
+}
+
+body {
+  background-color: var(--md-sys-color-surface);
+  color: var(--md-sys-color-on-surface);
+  font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Material Design 3 focus ring style */
+:focus-visible {
+  outline: 2px solid var(--md-sys-color-primary);
+  outline-offset: 2px;
+}
+
+/* Custom scrollbar matching M3 minimal aesthetic */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--md-sys-color-outline);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--md-sys-color-secondary);
+}

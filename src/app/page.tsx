@@ -23,6 +23,9 @@ export default function HomeDashboard() {
     fileName: string;
     course: string;
     docType: string;
+    filePath?: string;
+    sessionNo?: number;
+    topic?: string;
   } | null>(null);
 
   // Data states connected to SQLite DB
@@ -266,16 +269,26 @@ export default function HomeDashboard() {
     setIsUploadDocOpen(true);
   };
 
-  const handleUploadSuccess = (info: { fileName: string; docType: string; course?: string }) => {
+  const handleUploadSuccess = (info: {
+    fileName: string;
+    docType: string;
+    course?: string;
+    sessionNo?: number;
+    filePath?: string;
+    topic?: string;
+  }) => {
     const targetCourse = info.course || (schedules[0]?.course || "Mata Kuliah Umum");
     setNewUploadedDoc({
       fileName: info.fileName,
       course: targetCourse,
       docType: info.docType,
+      sessionNo: info.sessionNo,
+      filePath: info.filePath,
+      topic: info.topic,
     });
     setActiveTab("rps");
     setBannerNotice(
-      `Dokumen "${info.fileName}" (${info.docType}) berhasil diunggah dan otomatis ditempatkan di RPS & Materi perkuliahan ${targetCourse}.`
+      `Dokumen "${info.fileName}" berhasil diunggah ke mata kuliah ${targetCourse}.`
     );
     setTimeout(() => setBannerNotice(null), 6000);
   };
@@ -451,6 +464,7 @@ export default function HomeDashboard() {
         }}
         onUploadSuccess={handleUploadSuccess}
         initialFile={droppedFile}
+        courses={Array.from(new Set(schedules.map((s) => s.course).filter(Boolean)))}
       />
     </div>
   );

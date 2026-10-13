@@ -29,8 +29,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       originalName: file.name,
-      fileName: safeName,
       filePath: `/storage/${safeName}`,
+      url: `/storage/${safeName}`,
       size: file.size,
       mimeType: file.type,
     });

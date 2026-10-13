@@ -53,6 +53,7 @@ export interface StudentProfile {
   academicAdvisor: string;
   targetGPA: string;
   maxSKS: number;
+  photoUrl?: string;
 }
 
 export interface CourseLecturerItem {
@@ -68,78 +69,7 @@ export interface CourseLecturerItem {
   attendanceStatus: "aman" | "hmm" | "gawat" | "bahaya" | "waspada";
 }
 
-const initialCourseLecturers: CourseLecturerItem[] = [
-  {
-    id: "cl-1",
-    courseName: "Kecerdasan Buatan & Sistem Pakar",
-    lecturerName: "Dr. Ir. Budi Santoso, M.Kom.",
-    lecturerPhoto: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&auto=format&fit=crop&q=80",
-    dayTime: "Kamis, 09.00 - 11.30 WIB",
-    room: "Lab AI - Gd. C 302",
-    sks: 3,
-    whatsapp: "6281234567890",
-    lmsUrl: "https://elok.ugm.ac.id/course/ai-2026",
-    attendanceStatus: "aman",
-  },
-  {
-    id: "cl-2",
-    courseName: "Sistem Operasi",
-    lecturerName: "Dr. Ahmad Fauzi, M.T.",
-    lecturerPhoto: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&auto=format&fit=crop&q=80",
-    dayTime: "Senin, 07.30 - 10.00 WIB",
-    room: "Lab Komputasi Dasar 2",
-    sks: 3,
-    whatsapp: "6281298765432",
-    lmsUrl: "https://elok.ugm.ac.id/course/os-2026",
-    attendanceStatus: "aman",
-  },
-  {
-    id: "cl-3",
-    courseName: "Rekayasa Perangkat Lunak",
-    lecturerName: "Siti Rahmawati, S.Kom., M.Cs.",
-    lecturerPhoto: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300&auto=format&fit=crop&q=80",
-    dayTime: "Selasa, 13.00 - 15.30 WIB",
-    room: "Ruang Teori 401",
-    sks: 3,
-    whatsapp: "6285712345678",
-    lmsUrl: "https://elok.ugm.ac.id/course/rpl-2026",
-    attendanceStatus: "aman",
-  },
-  {
-    id: "cl-4",
-    courseName: "Basis Data Lanjut",
-    lecturerName: "Prof. Hendra Kusuma",
-    lecturerPhoto: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300&auto=format&fit=crop&q=80",
-    dayTime: "Rabu, 10.15 - 12.45 WIB",
-    room: "Lab Basis Data 1",
-    sks: 3,
-    whatsapp: "6281345678901",
-    lmsUrl: "https://elok.ugm.ac.id/course/db-2026",
-    attendanceStatus: "hmm",
-  },
-  {
-    id: "cl-5",
-    courseName: "Jaringan Komputer",
-    lecturerName: "Ir. Dian Pratama, M.Eng.",
-    lecturerPhoto: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=300&auto=format&fit=crop&q=80",
-    dayTime: "Jumat, 08.00 - 10.30 WIB",
-    room: "Lab Jaringan Gd. D",
-    sks: 3,
-    whatsapp: "6282134567890",
-    lmsUrl: "https://elok.ugm.ac.id/course/net-2026",
-    attendanceStatus: "gawat",
-  },
-  {
-    id: "cl-6",
-    courseName: "Etika Profesi & Komunikasi",
-    lecturerName: "Dra. Ratna Dewi, M.Si.",
-    lecturerPhoto: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80",
-    dayTime: "Rabu, 13.30 - 15.10 WIB",
-    room: "Auditorium Lt. 2",
-    sks: 2,
-    attendanceStatus: "bahaya",
-  },
-];
+const initialCourseLecturers: CourseLecturerItem[] = [];
 
 interface OtherViewsProps {
   activeTab: NavTab;
@@ -181,109 +111,7 @@ interface CourseFolder {
   files: FileItem[];
 }
 
-const initialFolders: CourseFolder[] = [
-  {
-    id: "f-ai",
-    courseName: "Kecerdasan Buatan & Sistem Pakar",
-    lecturer: "Dr. Ir. Budi Santoso, M.Kom.",
-    files: [
-      {
-        id: "doc-ai-1",
-        name: "RPS_KecerdasanBuatan_2026.pdf",
-        type: "pdf",
-        updated: "12 Sep 2026",
-        description: "Rencana Pembelajaran Semester resmi dengan matriks 14 sesi pertemuan, rubrik penilaian praktikum, dan bobot UTS/UAS.",
-        sessions: [
-          { no: 1, topic: "Pengantar Kecerdasan Buatan & Agen Cerdas", subtopics: "Definisi AI, PEAS framework, lingkungan agen statis vs dinamis" },
-          { no: 2, topic: "Uninformed Search (BFS, DFS, UCS)", subtopics: "Kompleksitas waktu, ruang memori, completeness, optimality", weight: "Tugas 1 (5%)" },
-          { no: 3, topic: "Informed Search & Heuristic Evaluation", subtopics: "Fungsi heuristik manhattan, greedy best-first search" },
-          { no: 4, topic: "Algoritma A* & Optimasi Jalur", subtopics: "Admissibility, consistency/monotonicity, implementasi Python", weight: "Praktikum 1 (15%)" },
-          { no: 5, topic: "Adversarial Search & Game Playing", subtopics: "Minimax algorithm, alpha-beta pruning evaluation" },
-          { no: 6, topic: "Constraint Satisfaction Problems (CSP)", subtopics: "Forward checking, arc consistency (AC-3), backtracking" },
-          { no: 7, topic: "Review Tengah Semester & Studi Kasus", subtopics: "Penyelesaian puzzle 8-tile dan map coloring" },
-          { no: 8, topic: "Ujian Tengah Semester (UTS)", subtopics: "Evaluasi teori materi sesi 1 s.d. 7", weight: "UTS (30%)" },
-          { no: 9, topic: "Logika Proposisional & First-Order Logic", subtopics: "Inference rules, resolution refutation, knowledge engineering" },
-          { no: 10, topic: "Sistem Berbasis Pengetahuan & Forward/Backward Chaining", subtopics: "Rule-based expert system, conflict resolution" },
-          { no: 11, topic: "Penalaran Tidak Pasti & Teorema Bayes", subtopics: "Probabilistic reasoning, bayesian networks conditional probability" },
-          { no: 12, topic: "Pengantar Machine Learning: Klasifikasi Supervised", subtopics: "Decision trees, ID3/C4.5, information gain, entropy" },
-          { no: 13, topic: "Presentasi Tugas Besar Proyek Agen Mandiri", subtopics: "Demo sistem agen pada arena gridworld", weight: "Tugas Besar (20%)" },
-          { no: 14, topic: "Ujian Akhir Semester (UAS)", subtopics: "Komprehensif materi semester gasal", weight: "UAS (30%)" },
-        ],
-      },
-      {
-        id: "doc-ai-2",
-        name: "Slide-Pertemuan-04_AStar_Search.pptx",
-        type: "pptx",
-        updated: "18 Sep 2026",
-        description: "Bahan presentasi kuliah sesi 4: Perumusan heuristik, grafik search vs tree search, dan latihan soal jalur terpendek.",
-        sessions: [
-          { no: 4, topic: "Sesi 4: Detail Implementasi A*", subtopics: "Priority queue, open set, closed set, rekonstruksi jalur rute" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "f-os",
-    courseName: "Sistem Operasi",
-    lecturer: "Dr. Ahmad Fauzi, M.T.",
-    files: [
-      {
-        id: "doc-os-1",
-        name: "Silabus_SistemOperasi_Rev3.pdf",
-        type: "pdf",
-        updated: "10 Sep 2026",
-        description: "Silabus lengkap konsep arsitektur OS modern, manajemen proses, memory paging, concurrency, dan file system.",
-        sessions: [
-          { no: 1, topic: "Arsitektur Sistem Operasi & System Calls", subtopics: "Dual-mode operation, kernel space vs user space" },
-          { no: 2, topic: "Manajemen Proses & Penjadwalan CPU", subtopics: "PCB, context switching, Round Robin, Multilevel Feedback Queue" },
-          { no: 3, topic: "Sinkronisasi Proses & Race Conditions", subtopics: "Critical section problem, Peterson's algorithm, Semaphores" },
-          { no: 4, topic: "Deadlock: Pencegahan, Penghindaran, & Deteksi", subtopics: "Kondisi Coffman, Banker's Algorithm, Resource Allocation Graph", weight: "Tugas 2 (10%)" },
-          { no: 5, topic: "Manajemen Memori: Swapping & Paging", subtopics: "Page table, TLB, frame allocation, internal vs external fragmentation" },
-          { no: 6, topic: "Virtual Memory & Page Replacement", subtopics: "Demand paging, FIFO, LRU, Optimal page replacement, Belady anomaly" },
-          { no: 7, topic: "Ujian Tengah Semester (UTS)", subtopics: "Materi proses, CPU scheduling, dan deadlock", weight: "UTS (35%)" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "f-rpl",
-    courseName: "Rekayasa Perangkat Lunak",
-    lecturer: "Siti Rahmawati, S.Kom., M.Cs.",
-    files: [
-      {
-        id: "doc-rpl-1",
-        name: "RPS_RPL_Agile_Scrum_2026.pdf",
-        type: "pdf",
-        updated: "15 Sep 2026",
-        description: "Silabus rekayasa perangkat lunak berbasis Agile/Scrum dengan proyek kolaboratif semester penuh.",
-        sessions: [
-          { no: 1, topic: "Software Engineering Principles & Lifecycle", subtopics: "Waterfall vs Agile, manifesto agile, extreme programming" },
-          { no: 2, topic: "Requirements Engineering & SRS IEEE 830", subtopics: "Functional & non-functional requirements, use case specifications", weight: "Milestone 1 (10%)" },
-          { no: 3, topic: "User Stories & Backlog Refinement", subtopics: "INVEST criteria, acceptance criteria, story point estimation" },
-        ],
-      },
-    ],
-  },
-  {
-    id: "f-db",
-    courseName: "Basis Data Lanjut",
-    lecturer: "Prof. Hendra Kusuma",
-    files: [
-      {
-        id: "doc-db-1",
-        name: "RPS_BasisDataLanjut_2026.pdf",
-        type: "pdf",
-        updated: "08 Sep 2026",
-        description: "Silabus optimasi query, query execution plan, B-Tree indexing, dan transaksi ACID.",
-        sessions: [
-          { no: 1, topic: "Review Relational Model & SQL Advanced", subtopics: "Window functions, CTE, complex joins, subquery optimization" },
-          { no: 2, topic: "Storage Architecture & Indexing Data Structures", subtopics: "B-Tree, B+Tree, Hash indexing, clustered vs secondary index" },
-          { no: 3, topic: "Query Processing & Execution Plan", subtopics: "EXPLAIN ANALYZE, cost estimation, sequential vs index scan" },
-        ],
-      },
-    ],
-  },
-];
+const initialFolders: CourseFolder[] = [];
 
 // Obsidian-like Note Item
 interface NoteItem {
@@ -302,114 +130,7 @@ interface NoteFolder {
   notes: NoteItem[];
 }
 
-const initialNoteFolders: NoteFolder[] = [
-  {
-    id: "nf-ai",
-    name: "Kecerdasan Buatan",
-    notes: [
-      {
-        id: "note-ai-1",
-        filename: "Catatan-04_AStar_Heuristik.md",
-        title: "Algoritma A* & Fungsi Heuristik Admissible",
-        format: "md",
-        updated: "Hari Ini, 10.15",
-        content: `# Algoritma A* & Fungsi Heuristik Admissible
-
-Fungsi evaluasi inti pada algoritma pencarian A*:
-f(n) = g(n) + h(n)
-
-- **g(n)**: Biaya aktual yang telah ditempuh dari simpul awal ke simpul n.
-- **h(n)**: Estimasi biaya heuristik dari simpul n ke simpul tujuan (goal).
-
-## Syarat Keabsahan Heuristik
-1. **Admissible (Layak)**: h(n) <= h*(n). Heuristik tidak boleh pernah melebih-lebihkan (overestimate) biaya riil sebenarnya ke tujuan.
-2. **Consistent / Monotonic**: h(n) <= c(n, a, n') + h(n').
-
-## Struktur Data Implementasi
-- Priority Queue (Min-Heap) untuk **OpenSet**.
-- Hash Map atau Set untuk **ClosedSet** (simpul yang telah dievaluasi).
-- Map parent pointers untuk merekonstruksi rute jalur terpendek.`,
-      },
-      {
-        id: "note-ai-2",
-        filename: "Catatan-02_Uninformed_BFS.md",
-        title: "Pencarian Blind Search: BFS vs DFS",
-        format: "md",
-        updated: "24 Sep 2026",
-        content: `# Perbandingan Algoritma Blind Search
-
-1. **Breadth-First Search (BFS)**
-   - Struktur: Queue (FIFO)
-   - Karakteristik: Complete & Optimal jika cost tiap step seragam.
-   - Kelemahan: Konsumsi memori eksponensial O(b^d).
-
-2. **Depth-First Search (DFS)**
-   - Struktur: Stack (LIFO)
-   - Karakteristik: Hemat memori O(bm), namun tidak menjamin rute optimal.`,
-      },
-    ],
-  },
-  {
-    id: "nf-os",
-    name: "Sistem Operasi",
-    notes: [
-      {
-        id: "note-os-1",
-        filename: "Catatan-03_Sinkronisasi_Semaphores.md",
-        title: "Sinkronisasi Proses & Mutex vs Semaphores",
-        format: "md",
-        updated: "Kemarin, 08.45",
-        content: `# Sinkronisasi Proses & Semaphores
-
-Critical section problem menuntut tiga syarat fundamental:
-1. **Mutual Exclusion**: Hanya satu proses dalam critical section pada satu waktu.
-2. **Progress**: Pemilihan proses berikutnya tidak boleh tertunda tanpa batas.
-3. **Bounded Waiting**: Terdapat batas waktu tunggu agar tidak terjadi starvation.
-
-## Mutex vs Counting Semaphore
-- **Mutex**: Memiliki konsep ownership (hanya thread yang mengunci yang boleh melepas kunci). Bernilai biner (0/1).
-- **Counting Semaphore**: Mengelola akses ke kumpulan sumber daya berkapasitas N. Tidak memiliki konsep kepemilikan.`,
-      },
-    ],
-  },
-  {
-    id: "nf-rpl",
-    name: "Rekayasa Perangkat Lunak",
-    notes: [
-      {
-        id: "note-rpl-1",
-        filename: "Milestone-01_Checklist_SRS.txt",
-        title: "Checklist Spesifikasi Kebutuhan SRS IEEE 830",
-        format: "txt",
-        updated: "30 Sep 2026",
-        content: `CHECKLIST MILESTONE 1 - SPESIFIKASI KEBUTUHAN PERANGKAT LUNAK
-
-[x] Bab 1: Pendahuluan, Lingkup Proyek, Definisi Singkatan
-[x] Bab 2: Deskripsi Umum Produk, Karakteristik Pengguna
-[ ] Bab 3: Kebutuhan Fungsional (Use Case Spec 1 s.d. 8)
-[ ] Bab 4: Kebutuhan Non-Fungsional (Kinerja, Keamanan, Portabilitas)
-[ ] Lampiran: Diagram Alur Aktivitas & Wireframe Prototipe`,
-      },
-    ],
-  },
-  {
-    id: "nf-free",
-    name: "Catatan Bebas",
-    notes: [
-      {
-        id: "note-free-1",
-        filename: "Todo_Pekan_Ini.txt",
-        title: "Rencana Belajar & Target Mandiri",
-        format: "txt",
-        updated: "28 Sep 2026",
-        content: `Target Belajar Mandiri:
-1. Selesaikan modul implementasi Python pencarian rute
-2. Diskusi bab 3 kebutuhan fungsional bersama kelompok
-3. Persiapkan kuis mandiri sesi 4`,
-      },
-    ],
-  },
-];
+const initialNoteFolders: NoteFolder[] = [];
 
 export default function OtherViews({
   activeTab,
@@ -428,15 +149,18 @@ export default function OtherViews({
   onUpdateTask,
   newUploadedDoc,
 }: OtherViewsProps) {
-  // Akun Step state
-  const [akunStep, setAkunStep] = useState<1 | 2 | 3>(1);
   const [formData, setFormData] = useState<StudentProfile>(profile);
   const [isSaved, setIsSaved] = useState(false);
 
+  // Sync external profile changes into local formData (including photoUrl)
+  React.useEffect(() => {
+    setFormData(profile);
+  }, [profile]);
+
   // Dynamic RPS Folder & Document Preview state (40/60 Split)
   const [rpsFolders, setRpsFolders] = useState<CourseFolder[]>(initialFolders);
-  const [openRpsFolderId, setOpenRpsFolderId] = useState<string>("f-ai");
-  const [selectedFileId, setSelectedFileId] = useState<string>("doc-ai-1");
+  const [openRpsFolderId, setOpenRpsFolderId] = useState<string>("");
+  const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [rpsSearchQuery, setRpsSearchQuery] = useState("");
 
   // Sync newly uploaded document directly into matching course folder in RPS
@@ -497,26 +221,74 @@ export default function OtherViews({
 
   // Obsidian-like Catatan Kuliah state with COLLAPSIBLE FOLDERS
   const [noteFolders, setNoteFolders] = useState<NoteFolder[]>(initialNoteFolders);
-  const [openNoteFolderIds, setOpenNoteFolderIds] = useState<string[]>(["nf-ai", "nf-os"]);
-  const [activeNoteId, setActiveNoteId] = useState<string>("note-ai-1");
+  const [openNoteFolderIds, setOpenNoteFolderIds] = useState<string[]>([]);
+  const [activeNoteId, setActiveNoteId] = useState<string>("");
   const [noteEditMode, setNoteEditMode] = useState<"edit" | "preview">("edit");
   const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
   const [noteSearchQuery, setNoteSearchQuery] = useState("");
 
-  // Course & Lecturer state for Matkul tab (matching user sketch)
+  // Course & Lecturer state for Matkul tab (synchronizes from schedules)
   const [courseLecturers, setCourseLecturers] = useState<CourseLecturerItem[]>(initialCourseLecturers);
   const [editingLecturer, setEditingLecturer] = useState<CourseLecturerItem | null>(null);
   const [isAddLecturerOpen, setIsAddLecturerOpen] = useState(false);
   const [newLecturerForm, setNewLecturerForm] = useState<Partial<CourseLecturerItem>>({
     courseName: "",
     lecturerName: "",
-    dayTime: "Kamis, 09.00 - 11.30 WIB",
-    room: "Ruang Teori 301",
+    dayTime: "Senin, 09.00 - 11.30 WIB",
+    room: "-",
     sks: 3,
     whatsapp: "",
     lmsUrl: "",
     attendanceStatus: "aman",
   });
+
+  // Synchronize schedules from Calendar into Matkul & Dosen tab dynamically
+  React.useEffect(() => {
+    if (schedules && schedules.length > 0) {
+      setCourseLecturers((prev) => {
+        const customMap = new Map(prev.map((c) => [c.courseName.toLowerCase(), c]));
+        const merged: CourseLecturerItem[] = [];
+        const seenCourses = new Set<string>();
+
+        schedules.forEach((s) => {
+          const key = s.course.toLowerCase();
+          if (!seenCourses.has(key)) {
+            seenCourses.add(key);
+            const existing = customMap.get(key);
+            const dayStr = s.day ? s.day.charAt(0).toUpperCase() + s.day.slice(1) : "Senin";
+            const timeStr = `${dayStr}, ${s.startTime || "08.00"} - ${s.endTime || "10.00"} WIB`;
+            if (existing) {
+              merged.push({
+                ...existing,
+                dayTime: timeStr,
+                room: s.room && s.room !== "-" ? s.room : existing.room || "-",
+                lecturerName: existing.lecturerName && existing.lecturerName !== "-" ? existing.lecturerName : (s.lecturer || "-"),
+              });
+            } else {
+              merged.push({
+                id: s.id || `cl-${Date.now()}-${Math.random()}`,
+                courseName: s.course,
+                lecturerName: s.lecturer || "-",
+                dayTime: timeStr,
+                room: s.room || "-",
+                sks: 3,
+                attendanceStatus: "aman",
+              });
+            }
+          }
+        });
+
+        // Keep any manually added lecturers not in schedules
+        prev.forEach((p) => {
+          if (!seenCourses.has(p.courseName.toLowerCase())) {
+            merged.push(p);
+          }
+        });
+
+        return merged;
+      });
+    }
+  }, [schedules]);
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>, isNew: boolean = false) => {
     const file = e.target.files?.[0];
@@ -636,24 +408,29 @@ export default function OtherViews({
   };
 
   const handleCreateNewNote = (folderId?: string) => {
-    const targetFolderId = folderId || noteFolders[0].id;
     const newId = `note-${Date.now()}`;
     const nextNum = allNotes.length + 1;
     const newDoc: NoteItem = {
       id: newId,
-      filename: `Catatan_Kuliah_Sesi_${nextNum}.md`,
+      filename: `Catatan_Kuliah_${nextNum}.md`,
       title: `Catatan Kuliah Pertemuan ${nextNum}`,
       format: "md",
       updated: "Baru saja",
       content: `# Catatan Kuliah Pertemuan ${nextNum}\n\n## Pokok Bahasan\n- \n\n## Rangkuman Konsep\n`,
     };
 
-    setNoteFolders((prev) =>
-      prev.map((f) => (f.id === targetFolderId ? { ...f, notes: [newDoc, ...f.notes] } : f))
-    );
-    if (!openNoteFolderIds.includes(targetFolderId)) {
-      setOpenNoteFolderIds((prev) => [...prev, targetFolderId]);
-    }
+    setNoteFolders((prev) => {
+      if (prev.length === 0) {
+        const defaultFolderId = `nf-${Date.now()}`;
+        setOpenNoteFolderIds([defaultFolderId]);
+        return [{ id: defaultFolderId, name: "Catatan Kuliah", notes: [newDoc] }];
+      }
+      const targetFolderId = folderId || prev[0].id;
+      if (!openNoteFolderIds.includes(targetFolderId)) {
+        setOpenNoteFolderIds((ids) => [...ids, targetFolderId]);
+      }
+      return prev.map((f) => (f.id === targetFolderId ? { ...f, notes: [newDoc, ...f.notes] } : f));
+    });
     setActiveNoteId(newId);
     setNoteEditMode("edit");
   };
@@ -689,7 +466,7 @@ export default function OtherViews({
   // Find currently active file in RPS
   const allRpsFiles = rpsFolders.flatMap((f) => f.files);
   const currentDoc = allRpsFiles.find((f) => f.id === selectedFileId) || (rpsFolders[0]?.files[0] ?? null);
-  const currentFolder = rpsFolders.find((f) => f.files.some((fl) => fl.id === currentDoc?.id)) || rpsFolders[0];
+  const currentFolder = rpsFolders.find((f) => f.files.some((fl) => fl.id === currentDoc?.id)) || rpsFolders[0] || null;
 
   return (
     <section className="flex-1 bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-7 space-y-5 shadow-xs flex flex-col">
@@ -708,8 +485,7 @@ export default function OtherViews({
             {activeTab === "kalender" && "Kalender & Agenda"}
             {activeTab === "matkul" && "Mata Kuliah & Dosen Pengampu"}
             {activeTab === "quiz" && "AI Quiz & Review Mandiri"}
-            {activeTab === "akun" && "Akun & Profil Mahasiswa"}
-            {activeTab === "setting" && "Pengaturan & Integrasi"}
+            {(activeTab === "akun" || activeTab === "setting") && "Akun & Pengaturan Mahasiswa"}
           </h2>
         </div>
       </div>
@@ -783,107 +559,121 @@ export default function OtherViews({
 
             {/* Folder Tree Collapsible List */}
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {noteFolders.map((folder) => {
-                const isOpen = openNoteFolderIds.includes(folder.id);
-                const folderNotes = folder.notes.filter((n) =>
-                  noteSearchQuery
-                    ? n.title.toLowerCase().includes(noteSearchQuery.toLowerCase()) ||
-                      n.filename.toLowerCase().includes(noteSearchQuery.toLowerCase())
-                    : true
-                );
-
-                return (
-                  <div
-                    key={folder.id}
-                    className="border border-m3-outline-variant rounded-2xl overflow-hidden bg-m3-surface-container/20"
+              {noteFolders.length === 0 ? (
+                <div className="p-6 text-center text-xs text-m3-secondary border border-dashed border-m3-outline-variant rounded-2xl space-y-3">
+                  <p>Belum ada catatan kuliah.</p>
+                  <button
+                    type="button"
+                    onClick={() => handleCreateNewNote()}
+                    className="px-3.5 py-1.5 rounded-full bg-m3-primary text-m3-on-primary text-xs font-semibold shadow-xs hover:brightness-95 transition-all inline-flex items-center gap-1"
                   >
-                    {/* Folder Header Button */}
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Catatan Baru</span>
+                  </button>
+                </div>
+              ) : (
+                noteFolders.map((folder) => {
+                  const isOpen = openNoteFolderIds.includes(folder.id);
+                  const folderNotes = folder.notes.filter((n) =>
+                    noteSearchQuery
+                      ? n.title.toLowerCase().includes(noteSearchQuery.toLowerCase()) ||
+                        n.filename.toLowerCase().includes(noteSearchQuery.toLowerCase())
+                      : true
+                  );
+
+                  return (
                     <div
-                      onClick={() => toggleNoteFolder(folder.id)}
-                      className="w-full p-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-m3-surface-container/60 transition-colors"
+                      key={folder.id}
+                      className="border border-m3-outline-variant rounded-2xl overflow-hidden bg-m3-surface-container/20"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {isOpen ? (
-                          <FolderOpen className="w-4 h-4 text-m3-primary flex-shrink-0" />
-                        ) : (
-                          <Folder className="w-4 h-4 text-m3-secondary flex-shrink-0" />
-                        )}
-                        <span className="text-xs font-bold text-m3-on-surface truncate">
-                          {folder.name}
-                        </span>
+                      {/* Folder Header Button */}
+                      <div
+                        onClick={() => toggleNoteFolder(folder.id)}
+                        className="w-full p-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-m3-surface-container/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isOpen ? (
+                            <FolderOpen className="w-4 h-4 text-m3-primary flex-shrink-0" />
+                          ) : (
+                            <Folder className="w-4 h-4 text-m3-secondary flex-shrink-0" />
+                          )}
+                          <span className="text-xs font-bold text-m3-on-surface truncate">
+                            {folder.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-[10px] text-m3-secondary font-medium">
+                            {folder.notes.length}
+                          </span>
+                          <ChevronRight
+                            className={`w-3.5 h-3.5 text-m3-secondary transition-transform ${
+                              isOpen ? "rotate-90" : ""
+                            }`}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className="text-[10px] text-m3-secondary font-medium">
-                          {folder.notes.length}
-                        </span>
-                        <ChevronRight
-                          className={`w-3.5 h-3.5 text-m3-secondary transition-transform ${
-                            isOpen ? "rotate-90" : ""
-                          }`}
-                        />
-                      </div>
-                    </div>
 
-                    {/* Collapsible File List inside Folder */}
-                    {isOpen && (
-                      <div className="p-1.5 pt-0 space-y-1 bg-white">
-                        {folderNotes.length === 0 ? (
-                          <div className="py-2 text-center text-[10px] text-m3-secondary">
-                            Folder kosong
-                          </div>
-                        ) : (
-                          folderNotes.map((note) => {
-                            const isActive = note.id === activeNote.id;
+                      {/* Collapsible File List inside Folder */}
+                      {isOpen && (
+                        <div className="p-1.5 pt-0 space-y-1 bg-white">
+                          {folderNotes.length === 0 ? (
+                            <div className="py-2 text-center text-[10px] text-m3-secondary">
+                              Folder kosong
+                            </div>
+                          ) : (
+                            folderNotes.map((note) => {
+                              const isActive = activeNote && note.id === activeNote.id;
 
-                            return (
-                              <div
-                                key={note.id}
-                                onClick={() => setActiveNoteId(note.id)}
-                                className={`w-full p-2 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer group ${
-                                  isActive
-                                    ? "bg-m3-primary-container border border-m3-primary shadow-xs"
-                                    : "hover:bg-slate-50 border border-transparent"
-                                }`}
-                              >
-                                <div className="flex items-center gap-2 min-w-0">
-                                  <FileText
-                                    className={`w-3.5 h-3.5 flex-shrink-0 ${
-                                      isActive ? "text-m3-primary" : "text-m3-secondary"
-                                    }`}
-                                  />
-                                  <div className="min-w-0">
-                                    <p
-                                      className={`text-xs truncate ${
-                                        isActive
-                                          ? "text-m3-on-primary-container font-bold"
-                                          : "text-m3-on-surface font-medium"
-                                      }`}
-                                    >
-                                      {note.title}
-                                    </p>
-                                    <p className="text-[10px] text-m3-secondary font-mono truncate">
-                                      {note.filename}
-                                    </p>
-                                  </div>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={(e) => handleDeleteNote(note.id, e)}
-                                  className="p-1 text-m3-secondary hover:text-red-500 opacity-40 group-hover:opacity-100 transition-opacity"
-                                  title="Hapus berkas"
+                              return (
+                                <div
+                                  key={note.id}
+                                  onClick={() => setActiveNoteId(note.id)}
+                                  className={`w-full p-2 rounded-xl flex items-center justify-between text-left transition-all cursor-pointer group ${
+                                    isActive
+                                      ? "bg-m3-primary-container border border-m3-primary shadow-xs"
+                                      : "hover:bg-slate-50 border border-transparent"
+                                  }`}
                                 >
-                                  <Trash2 className="w-3 h-3" />
-                                </button>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                                  <div className="flex items-center gap-2 min-w-0">
+                                    <FileText
+                                      className={`w-3.5 h-3.5 flex-shrink-0 ${
+                                        isActive ? "text-m3-primary" : "text-m3-secondary"
+                                      }`}
+                                    />
+                                    <div className="min-w-0">
+                                      <p
+                                        className={`text-xs truncate ${
+                                          isActive
+                                            ? "text-m3-on-primary-container font-bold"
+                                            : "text-m3-on-surface font-medium"
+                                        }`}
+                                      >
+                                        {note.title}
+                                      </p>
+                                      <p className="text-[10px] text-m3-secondary font-mono truncate">
+                                        {note.filename}
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleDeleteNote(note.id, e)}
+                                    className="p-1 text-m3-secondary hover:text-red-500 opacity-40 group-hover:opacity-100 transition-opacity"
+                                    title="Hapus berkas"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -895,18 +685,36 @@ export default function OtherViews({
                 : "lg:col-span-8"
             }`}
           >
-            {/* Editor Top Bar: Title & Fullscreen Button */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-m3-outline-variant">
-              <div className="flex-1 min-w-0">
-                <input
-                  type="text"
-                  value={activeNote.title}
-                  onChange={(e) => handleUpdateActiveNote("title", e.target.value)}
-                  className="w-full text-base sm:text-lg font-bold text-m3-on-surface bg-transparent focus:outline-none focus:ring-0 placeholder:text-m3-secondary"
-                  placeholder="Judul Catatan..."
-                />
-                <p className="text-[11px] text-m3-secondary font-mono">{activeNote.filename}</p>
+            {!activeNote ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-m3-secondary">
+                <FileText className="w-12 h-12 stroke-[1.5] mb-2 opacity-40 text-m3-primary" />
+                <p className="text-sm font-semibold text-m3-on-surface">Belum ada catatan perkuliahan</p>
+                <p className="text-xs text-m3-secondary/80 mt-1 max-w-sm">
+                  Mulai buat ringkasan materi, catatan kelas, atau daftar target belajar mandiri Anda.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => handleCreateNewNote()}
+                  className="mt-4 px-4 py-2 rounded-full bg-m3-primary text-m3-on-primary text-xs font-bold flex items-center gap-1.5 shadow-xs hover:brightness-95 transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Buat Catatan Pertama</span>
+                </button>
               </div>
+            ) : (
+              <>
+                {/* Editor Top Bar: Title & Fullscreen Button */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-m3-outline-variant">
+                  <div className="flex-1 min-w-0">
+                    <input
+                      type="text"
+                      value={activeNote.title}
+                      onChange={(e) => handleUpdateActiveNote("title", e.target.value)}
+                      className="w-full text-base sm:text-lg font-bold text-m3-on-surface bg-transparent focus:outline-none focus:ring-0 placeholder:text-m3-secondary"
+                      placeholder="Judul Catatan..."
+                    />
+                    <p className="text-[11px] text-m3-secondary font-mono">{activeNote.filename}</p>
+                  </div>
 
               {/* Mode Toggle & Fullscreen Button */}
               <div className="flex items-center gap-2 flex-shrink-0">
@@ -1042,9 +850,11 @@ export default function OtherViews({
                 <span>Tersimpan di memori</span>
               </span>
             </div>
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </div>
+    </div>
+  )}
 
       {/* TAB RPS & MATERI: 40/60 FOLDER TREE + REALISTIC ACADEMIC DOCUMENT PREVIEW */}
       {activeTab === "rps" && (
@@ -1068,96 +878,105 @@ export default function OtherViews({
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {rpsFolders.map((folder) => {
-                const isOpen = openRpsFolderId === folder.id;
-                const folderFiles = folder.files.filter((f) =>
-                  rpsSearchQuery
-                    ? f.name.toLowerCase().includes(rpsSearchQuery.toLowerCase()) ||
-                      folder.courseName.toLowerCase().includes(rpsSearchQuery.toLowerCase())
-                    : true
-                );
+              {rpsFolders.length === 0 ? (
+                <div className="p-6 text-center text-xs text-m3-secondary border border-dashed border-m3-outline-variant rounded-2xl space-y-2">
+                  <p>Belum ada berkas materi atau RPS.</p>
+                  <p className="text-[11px] text-m3-secondary/70">
+                    Berkas yang Anda upload dari dashboard akan otomatis terorganisir ke dalam folder matkul di sini.
+                  </p>
+                </div>
+              ) : (
+                rpsFolders.map((folder) => {
+                  const isOpen = openRpsFolderId === folder.id;
+                  const folderFiles = folder.files.filter((f) =>
+                    rpsSearchQuery
+                      ? f.name.toLowerCase().includes(rpsSearchQuery.toLowerCase()) ||
+                        folder.courseName.toLowerCase().includes(rpsSearchQuery.toLowerCase())
+                      : true
+                  );
 
-                return (
-                  <div
-                    key={folder.id}
-                    className="border border-m3-outline-variant rounded-2xl overflow-hidden bg-m3-surface-container/20"
-                  >
-                    {/* Folder Header Button - Sama persis seperti di Catatan Kuliah (Tanpa Dosen) */}
+                  return (
                     <div
-                      onClick={() => setOpenRpsFolderId(isOpen ? "" : folder.id)}
-                      className="w-full p-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-m3-surface-container/60 transition-colors"
+                      key={folder.id}
+                      className="border border-m3-outline-variant rounded-2xl overflow-hidden bg-m3-surface-container/20"
                     >
-                      <div className="flex items-center gap-2 min-w-0">
-                        {isOpen ? (
-                          <FolderOpen className="w-4 h-4 text-m3-primary flex-shrink-0" />
-                        ) : (
-                          <Folder className="w-4 h-4 text-m3-secondary flex-shrink-0" />
-                        )}
-                        <span className="text-xs font-bold text-m3-on-surface truncate">
-                          {folder.courseName}
-                        </span>
+                      {/* Folder Header Button - Sama persis seperti di Catatan Kuliah (Tanpa Dosen) */}
+                      <div
+                        onClick={() => setOpenRpsFolderId(isOpen ? "" : folder.id)}
+                        className="w-full p-2.5 flex items-center justify-between text-left cursor-pointer hover:bg-m3-surface-container/60 transition-colors"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          {isOpen ? (
+                            <FolderOpen className="w-4 h-4 text-m3-primary flex-shrink-0" />
+                          ) : (
+                            <Folder className="w-4 h-4 text-m3-secondary flex-shrink-0" />
+                          )}
+                          <span className="text-xs font-bold text-m3-on-surface truncate">
+                            {folder.courseName}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span className="text-[10px] text-m3-secondary font-medium">
+                            {folderFiles.length}
+                          </span>
+                          <ChevronRight
+                            className={`w-3.5 h-3.5 text-m3-secondary transition-transform ${
+                              isOpen ? "rotate-90" : ""
+                            }`}
+                          />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span className="text-[10px] text-m3-secondary font-medium">
-                          {folderFiles.length}
-                        </span>
-                        <ChevronRight
-                          className={`w-3.5 h-3.5 text-m3-secondary transition-transform ${
-                            isOpen ? "rotate-90" : ""
-                          }`}
-                        />
-                      </div>
-                    </div>
 
-                    {/* Berkas dalam folder (Sama seperti catatan) */}
-                    {isOpen && (
-                      <div className="p-1 space-y-0.5 border-t border-m3-outline-variant/60 bg-white">
-                        {folderFiles.map((file) => {
-                          const isSelected = file.id === selectedFileId;
+                      {/* Berkas dalam folder (Sama seperti catatan) */}
+                      {isOpen && (
+                        <div className="p-1 space-y-0.5 border-t border-m3-outline-variant/60 bg-white">
+                          {folderFiles.map((file) => {
+                            const isSelected = file.id === selectedFileId;
 
-                          return (
-                            <button
-                              key={file.id}
-                              type="button"
-                              onClick={() => setSelectedFileId(file.id)}
-                              className={`w-full p-2 rounded-xl flex items-center justify-between text-left transition-all ${
-                                isSelected
-                                  ? "bg-m3-primary-container border border-m3-primary text-m3-on-primary-container font-medium shadow-xs"
-                                  : "hover:bg-m3-surface-container-high text-m3-on-surface border border-transparent"
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                {file.type === "pdf" && (
-                                  <FileText className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? "text-m3-primary" : "text-rose-600"}`} />
-                                )}
-                                {file.type === "pptx" && (
-                                  <Presentation className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? "text-m3-primary" : "text-amber-600"}`} />
-                                )}
-                                {file.type === "docx" && (
-                                  <FileCode className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? "text-m3-primary" : "text-blue-600"}`} />
-                                )}
-                                <span className="text-xs truncate">
-                                  {file.name}
-                                </span>
-                              </div>
-
-                              <span
-                                className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex-shrink-0 ${
+                            return (
+                              <button
+                                key={file.id}
+                                type="button"
+                                onClick={() => setSelectedFileId(file.id)}
+                                className={`w-full p-2 rounded-xl flex items-center justify-between text-left transition-all ${
                                   isSelected
-                                    ? "bg-white text-m3-primary"
-                                    : "bg-m3-surface-container text-m3-secondary"
+                                    ? "bg-m3-primary-container border border-m3-primary text-m3-on-primary-container font-medium shadow-xs"
+                                    : "hover:bg-m3-surface-container-high text-m3-on-surface border border-transparent"
                                 }`}
                               >
-                                {file.type}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {file.type === "pdf" && (
+                                    <FileText className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? "text-m3-primary" : "text-rose-600"}`} />
+                                  )}
+                                  {file.type === "pptx" && (
+                                    <Presentation className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? "text-m3-primary" : "text-amber-600"}`} />
+                                  )}
+                                  {file.type === "docx" && (
+                                    <FileCode className={`w-3.5 h-3.5 flex-shrink-0 ${isSelected ? "text-m3-primary" : "text-blue-600"}`} />
+                                  )}
+                                  <span className="text-xs truncate">
+                                    {file.name}
+                                  </span>
+                                </div>
+
+                                <span
+                                  className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex-shrink-0 ${
+                                    isSelected
+                                      ? "bg-white text-m3-primary"
+                                      : "bg-m3-surface-container text-m3-secondary"
+                                  }`}
+                                >
+                                  {file.type}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 
@@ -1208,10 +1027,10 @@ export default function OtherViews({
               {/* Kop Dokumen Akademik Resmi */}
               <div className="text-center pb-4 border-b-2 border-slate-300 space-y-1">
                 <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-800">
-                  UNIVERSITAS GADJAH MADA • FAKULTAS TEKNIK
+                  {formData.university || profile.university || "UNIVERSITAS"} {formData.faculty ? `• ${formData.faculty.toUpperCase()}` : ""}
                 </h4>
                 <p className="text-[11px] font-semibold text-slate-600">
-                  DEPARTEMEN TEKNIK ELEKTRO DAN TEKNOLOGI INFORMASI
+                  {formData.major ? `PROGRAM STUDI ${formData.major.toUpperCase()}` : "DOKUMEN PEMBELAJARAN RESMI"}
                 </p>
                 <div className="pt-2">
                   <span className="px-3 py-1 bg-white border border-slate-300 rounded-full text-xs font-bold uppercase tracking-wider text-slate-900 inline-block shadow-xs">
@@ -1224,11 +1043,11 @@ export default function OtherViews({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
                 <div>
                   <span className="text-[10px] text-m3-secondary block">Mata Kuliah</span>
-                  <span className="font-bold text-slate-900">{currentFolder.courseName}</span>
+                  <span className="font-bold text-slate-900">{currentFolder?.courseName || "-"}</span>
                 </div>
                 <div>
-                  <span className="text-[10px] text-m3-secondary block">Program Studi</span>
-                  <span className="font-bold text-slate-900">Teknik Informatika UGM</span>
+                  <span className="text-[10px] text-m3-secondary block">Program Studi / Fakultas</span>
+                  <span className="font-bold text-slate-900">{formData.major || formData.faculty || "-"}</span>
                 </div>
                 <div>
                   <span className="text-[10px] text-m3-secondary block">Semester / Beban</span>
@@ -1301,128 +1120,190 @@ export default function OtherViews({
         </div>
       )}
 
-      {/* TAB AKUN */}
-      {activeTab === "akun" && (
-        <div className="max-w-2xl mx-auto space-y-5">
+      {/* TAB AKUN & SETTING (HALAMAN TUNGGAL PANJANG DIPISAH GARIS) */}
+      {(activeTab === "akun" || activeTab === "setting") && (
+        <div className="max-w-3xl mx-auto w-full space-y-6">
           {isSaved && (
-            <div className="p-3.5 rounded-2xl bg-m3-tertiary text-m3-on-tertiary text-xs font-semibold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-              <span>Profil mahasiswa berhasil disimpan dan diperbarui!</span>
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
+              <span>Profil mahasiswa dan preferensi sistem berhasil disimpan!</span>
             </div>
           )}
 
-          <div className="flex items-center gap-2 p-1.5 bg-m3-surface-container rounded-2xl border border-m3-outline-variant">
-            {[
-              { step: 1, label: "1. Identitas Diri" },
-              { step: 2, label: "2. Akademik" },
-              { step: 3, label: "3. Beban & Target" },
-            ].map((s) => (
-              <button
-                key={s.step}
-                type="button"
-                onClick={() => setAkunStep(s.step as any)}
-                className={`flex-1 py-2 px-3 rounded-xl text-xs font-semibold transition-all ${
-                  akunStep === s.step
-                    ? "bg-m3-surface-container-low text-m3-on-surface shadow-xs font-bold"
-                    : "text-m3-secondary hover:text-m3-on-surface"
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
+          <form onSubmit={handleSaveProfile} className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-m3-outline-variant shadow-xs">
+            {/* BAGIAN 1: FOTO PROFIL & IDENTITAS DIRI */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-1">
+                <User className="w-4 h-4 text-m3-primary" />
+                <h3 className="text-sm font-bold text-m3-on-surface">Foto Profil & Identitas Diri</h3>
+              </div>
 
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            {akunStep === 1 && (
-              <div className="p-5 rounded-2xl bg-m3-surface-container border border-m3-outline-variant space-y-4 animate-in fade-in">
-                <div className="flex items-center gap-4 pb-3 border-b border-m3-outline-variant">
-                  <div className="w-16 h-16 rounded-full bg-m3-primary text-m3-on-primary font-bold text-lg flex items-center justify-center flex-shrink-0">
-                    {formData.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-m3-on-surface">{formData.name}</h4>
-                    <p className="text-xs text-m3-secondary">{formData.nim}</p>
-                  </div>
+              {/* Foto Profil with Live Preview and Change Button */}
+              <div className="flex items-center gap-5 p-4 rounded-2xl bg-m3-surface-container/30 border border-m3-outline-variant/60">
+                <div className="relative group w-20 h-20 rounded-full overflow-hidden border-2 border-m3-outline-variant shadow-xs flex-shrink-0 bg-m3-surface-container flex items-center justify-center">
+                  {formData.photoUrl ? (
+                    <img
+                      src={formData.photoUrl}
+                      alt={formData.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-m3-primary text-m3-on-primary font-bold text-xl flex items-center justify-center">
+                      {formData.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase() || "MA"}
+                    </div>
+                  )}
+                  <label
+                    htmlFor="profile-photo-upload"
+                    className="absolute inset-0 bg-black/40 text-white text-[10px] font-semibold flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer text-center px-1"
+                  >
+                    <span>Ganti Foto</span>
+                  </label>
                 </div>
 
-                <div className="space-y-1.5">
+                <div className="space-y-2 flex-1">
+                  <div>
+                    <h4 className="text-sm font-bold text-m3-on-surface">{formData.name || "Nama Mahasiswa"}</h4>
+                    <p className="text-xs text-m3-secondary font-mono">{formData.nim || "-"}</p>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <label
+                      htmlFor="profile-photo-upload"
+                      className="min-h-[36px] px-3.5 py-1.5 rounded-full bg-m3-primary text-m3-on-primary text-xs font-semibold cursor-pointer hover:brightness-95 transition-all inline-flex items-center gap-1.5 shadow-xs"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>Unggah Foto Profil</span>
+                    </label>
+                    <input
+                      id="profile-photo-upload"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const uploadData = new FormData();
+                        uploadData.append("file", file);
+                        try {
+                          const res = await fetch("/api/upload", { method: "POST", body: uploadData });
+                          if (res.ok) {
+                            const data = await res.json();
+                            const url = data.url || data.filePath;
+                            if (url) {
+                              setFormData((prev) => ({ ...prev, photoUrl: url }));
+                              return;
+                            }
+                          }
+                        } catch (err) {
+                          console.error("Upload error:", err);
+                        }
+                        const reader = new FileReader();
+                        reader.onload = (ev) => {
+                          const result = ev.target?.result as string;
+                          if (result) setFormData((prev) => ({ ...prev, photoUrl: result }));
+                        };
+                        reader.readAsDataURL(file);
+                      }}
+                    />
+                    {formData.photoUrl && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData((prev) => ({ ...prev, photoUrl: undefined }))}
+                        className="min-h-[36px] px-3 py-1.5 rounded-full text-xs font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+                      >
+                        Hapus Foto
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form Input Identitas Diri */}
+              <div className="space-y-3 pt-1">
+                <div className="space-y-1">
                   <label className="text-xs font-semibold text-m3-on-surface">Nama Lengkap</label>
                   <input
                     type="text"
                     value={formData.name}
                     onChange={(e) => handleInputChange("name", e.target.value)}
                     required
-                    className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                    placeholder="Contoh: Muhammad Raihan"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                   />
                 </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-m3-on-surface">Nomor Induk Mahasiswa (NIM)</label>
-                  <input
-                    type="text"
-                    value={formData.nim}
-                    onChange={(e) => handleInputChange("nim", e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
-                  />
-                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-m3-on-surface">Nomor Induk Mahasiswa (NIM)</label>
+                    <input
+                      type="text"
+                      value={formData.nim}
+                      onChange={(e) => handleInputChange("nim", e.target.value)}
+                      required
+                      placeholder="Contoh: 22/498231/TK/54120"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary font-mono"
+                    />
+                  </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-m3-on-surface">Email Kampus / Akun Resmi</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => handleInputChange("email", e.target.value)}
-                    required
-                    className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
-                  />
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-m3-on-surface">Email Kampus / Akun Resmi</label>
+                    <input
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => handleInputChange("email", e.target.value)}
+                      required
+                      placeholder="Contoh: mahasiswa@mail.ugm.ac.id"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                    />
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
 
-            {akunStep === 2 && (
-              <div className="p-5 rounded-2xl bg-m3-surface-container border border-m3-outline-variant space-y-4 animate-in fade-in">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-m3-on-surface">Program Studi</label>
-                    <input
-                      type="text"
-                      value={formData.major}
-                      onChange={(e) => handleInputChange("major", e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
-                    />
-                  </div>
+            <hr className="border-m3-outline-variant/60 my-6" />
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-m3-on-surface">Fakultas</label>
-                    <input
-                      type="text"
-                      value={formData.faculty}
-                      onChange={(e) => handleInputChange("faculty", e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
-                    />
-                  </div>
-                </div>
+            {/* BAGIAN 2: INSTITUSI & AKADEMIK */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-1">
+                <BookOpen className="w-4 h-4 text-m3-primary" />
+                <h3 className="text-sm font-bold text-m3-on-surface">Institusi & Akademik</h3>
+              </div>
 
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-m3-on-surface">Universitas / Institusi</label>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-m3-on-surface">
+                    Universitas / Institut / Politeknik
+                  </label>
                   <input
                     type="text"
                     value={formData.university}
                     onChange={(e) => handleInputChange("university", e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                    placeholder="Contoh: Universitas Gadjah Mada"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                   />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-m3-on-surface">
+                    Fakultas / Program Studi
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.faculty}
+                    onChange={(e) => handleInputChange("faculty", e.target.value)}
+                    placeholder="Contoh: Fakultas Teknik / Teknik Informatika"
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
                     <label className="text-xs font-semibold text-m3-on-surface">Semester Berjalan</label>
                     <select
                       value={formData.semester}
                       onChange={(e) => handleInputChange("semester", Number(e.target.value))}
-                      className="w-full px-3 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
+                      className="w-full px-3 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                     >
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((sem) => (
                         <option key={sem} value={sem}>
                           Semester {sem}
                         </option>
@@ -1430,79 +1311,92 @@ export default function OtherViews({
                     </select>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-m3-on-surface">Dosen Pembimbing Akademik</label>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-m3-on-surface">
+                      Dosen Pembimbing Akademik (Opsional)
+                    </label>
                     <input
                       type="text"
                       value={formData.academicAdvisor}
                       onChange={(e) => handleInputChange("academicAdvisor", e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                      placeholder="Nama Dosen PA"
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                     />
                   </div>
                 </div>
               </div>
-            )}
+            </div>
 
-            {akunStep === 3 && (
-              <div className="p-5 rounded-2xl bg-m3-surface-container border border-m3-outline-variant space-y-4 animate-in fade-in">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-m3-on-surface">Target Indeks Prestasi (IP)</label>
-                    <input
-                      type="text"
-                      value={formData.targetGPA}
-                      onChange={(e) => handleInputChange("targetGPA", e.target.value)}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
-                    />
-                  </div>
+            <hr className="border-m3-outline-variant/60 my-6" />
 
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-m3-on-surface">Batas SKS Maksimal</label>
-                    <input
-                      type="number"
-                      value={formData.maxSKS}
-                      onChange={(e) => handleInputChange("maxSKS", Number(e.target.value))}
-                      className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container-low border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
-                    />
-                  </div>
-                </div>
+            {/* BAGIAN 3: PENGATURAN DATA & SISTEM */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 pb-1">
+                <Globe className="w-4 h-4 text-m3-primary" />
+                <h3 className="text-sm font-bold text-m3-on-surface">Pengaturan Data & Preferensi Sistem</h3>
               </div>
-            )}
 
-            <div className="flex items-center justify-between pt-2">
-              {akunStep > 1 ? (
+              <div className="p-4 rounded-2xl bg-m3-surface-container/40 border border-m3-outline-variant/60 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-m3-on-surface">Penyimpanan Lokal (Offline-First SQLite)</p>
+                  <p className="text-[11px] text-m3-secondary">Seluruh data jadwal, tugas, dan materi tersimpan aman di perangkat lokal.</p>
+                </div>
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                  Aktif
+                </span>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-m3-surface-container/30 border border-m3-outline-variant/60 space-y-2 text-xs">
+                <h4 className="font-bold text-m3-on-surface">Preferensi Pengingat</h4>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-m3-secondary">Pengingat kelas 15 menit sebelum kuliah dimulai</span>
+                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded-md accent-m3-primary" />
+                </label>
+                <label className="flex items-center justify-between cursor-pointer">
+                  <span className="text-m3-secondary">Peringatan tenggat tugas kuliah (H-1)</span>
+                  <input type="checkbox" defaultChecked className="w-4 h-4 rounded-md accent-m3-primary" />
+                </label>
+              </div>
+
+              {/* Zona Bahaya: Reset Bersih */}
+              <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 space-y-2">
+                <h4 className="text-xs font-bold text-rose-900">Manajemen Database & Reset Bersih</h4>
+                <p className="text-[11px] text-rose-700 leading-relaxed">
+                  Kosongkan seluruh data tugas, jadwal kalender, dan materi untuk memulai kembali dengan catatan bersih tanpa data dummy.
+                </p>
                 <button
                   type="button"
-                  onClick={() => setAkunStep((prev) => (prev - 1) as any)}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold text-m3-secondary hover:bg-m3-surface-container transition-colors"
+                  onClick={async () => {
+                    if (window.confirm("Apakah Anda yakin ingin mengosongkan seluruh data tugas, jadwal, dan riwayat? Tindakan ini tidak dapat dibatalkan.")) {
+                      try {
+                        const res = await fetch("/api/reset", { method: "POST" });
+                        if (res.ok) {
+                          alert("Database berhasil dikosongkan. Halaman akan dimuat ulang.");
+                          window.location.reload();
+                        } else {
+                          alert("Gagal mengosongkan database.");
+                        }
+                      } catch (err) {
+                        alert("Terjadi kesalahan saat mereset data.");
+                      }
+                    }
+                  }}
+                  className="px-4 py-2 rounded-xl bg-white border border-rose-300 text-rose-700 hover:bg-rose-100 text-xs font-bold transition-colors shadow-xs"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  <span>Sebelumnya</span>
+                  Kosongkan Seluruh Data / Reset Bersih
                 </button>
-              ) : (
-                <div />
-              )}
-
-              <div className="flex items-center gap-2">
-                {akunStep < 3 ? (
-                  <button
-                    type="button"
-                    onClick={() => setAkunStep((prev) => (prev + 1) as any)}
-                    className="flex items-center gap-1.5 px-5 py-2 rounded-full text-xs font-bold bg-m3-secondary text-white hover:brightness-110 transition-all shadow-xs"
-                  >
-                    <span>Lanjut ke Step {akunStep + 1}</span>
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
-                ) : (
-                  <button
-                    type="submit"
-                    className="flex items-center gap-2 px-6 py-2.5 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs"
-                  >
-                    <Save className="w-4 h-4" />
-                    <span>Simpan Perubahan Akun</span>
-                  </button>
-                )}
               </div>
+            </div>
+
+            {/* TOMBOL SIMPAN */}
+            <div className="pt-4 border-t border-m3-outline-variant/60 flex items-center justify-end">
+              <button
+                type="submit"
+                className="min-h-[44px] px-6 py-2.5 rounded-full bg-m3-primary text-m3-on-primary text-xs font-bold hover:brightness-95 transition-all shadow-xs flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>Simpan Perubahan Akun & Pengaturan</span>
+              </button>
             </div>
           </form>
         </div>
@@ -1528,8 +1422,25 @@ export default function OtherViews({
           </div>
 
           {/* Grid 3 Kolom Kartu Sesuai Sketsa */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-            {courseLecturers.map((c) => (
+          {courseLecturers.length === 0 ? (
+            <div className="p-12 text-center text-xs text-m3-secondary border border-dashed border-m3-outline-variant rounded-3xl bg-white space-y-3">
+              <BookOpen className="w-10 h-10 mx-auto opacity-40 text-m3-primary" />
+              <p className="font-semibold text-sm text-m3-on-surface">Belum ada mata kuliah atau profil dosen</p>
+              <p className="text-xs text-m3-secondary max-w-sm mx-auto">
+                Tambahkan jadwal perkuliahan di Kalender atau klik tombol &quot;Tambah Mata Kuliah & Dosen&quot; di atas untuk mendaftarkan dosen pengampu.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsAddLecturerOpen(true)}
+                className="mt-2 px-4 py-2 rounded-full bg-m3-primary text-m3-on-primary text-xs font-bold inline-flex items-center gap-1.5 shadow-xs hover:brightness-95 transition-all"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Mata Kuliah</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+              {courseLecturers.map((c) => (
               <div
                 key={c.id}
                 onClick={() => setEditingLecturer(c)}
@@ -1644,6 +1555,7 @@ export default function OtherViews({
               </div>
             ))}
           </div>
+        )}
 
           {/* MODAL EDIT DOSEN & MATKUL */}
           {editingLecturer && (
@@ -2026,38 +1938,6 @@ export default function OtherViews({
           <p className="text-xs text-m3-secondary max-w-sm mt-1">
             Halaman ini dikosongkan sementara waktu sesuai instruksi pengembangan.
           </p>
-        </div>
-      )}
-
-      {/* TAB SETTING */}
-      {activeTab === "setting" && (
-        <div className="space-y-4 max-w-2xl mx-auto">
-          <div className="p-4 rounded-2xl bg-m3-surface-container border border-m3-outline-variant space-y-3">
-            <h4 className="text-xs font-bold text-m3-on-surface">Arsitektur & Mesin Data</h4>
-            <div className="p-3 rounded-xl bg-white border border-m3-outline-variant flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-m3-on-surface">Siklus Local Engine (Offline-First)</p>
-                <p className="text-[11px] text-m3-secondary">Penyimpanan SQLite lokal tanpa dependensi API luar berbayar</p>
-              </div>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
-                Aktif
-              </span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-m3-surface-container border border-m3-outline-variant space-y-3">
-            <h4 className="text-xs font-bold text-m3-on-surface">Preferensi Notifikasi</h4>
-            <div className="space-y-2 text-xs">
-              <label className="flex items-center justify-between">
-                <span className="text-m3-secondary">Pengingat kelas 15 menit sebelum mulai</span>
-                <input type="checkbox" defaultChecked className="w-4 h-4 rounded-md accent-m3-primary" />
-              </label>
-              <label className="flex items-center justify-between">
-                <span className="text-m3-secondary">Peringatan tenggat tugas (H-1)</span>
-                <input type="checkbox" defaultChecked className="w-4 h-4 rounded-md accent-m3-primary" />
-              </label>
-            </div>
-          </div>
         </div>
       )}
     </section>

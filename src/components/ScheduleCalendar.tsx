@@ -25,13 +25,13 @@ export interface ScheduleItem {
   id: string;
   userId?: string;
   course: string;
-  code: string;
-  room: string;
+  code?: string;
+  room?: string;
   startHour: number;
   durationHours: number;
   startTime: string;
   endTime: string;
-  lecturer: string;
+  lecturer?: string;
   day: string;
   status: "completed" | "active" | "upcoming";
   attendanceStatus?: string;
@@ -78,81 +78,6 @@ const getCourseBadgeColor = (courseName: string) => {
   return "bg-slate-100 text-slate-900 border-slate-300 hover:bg-slate-200";
 };
 
-export const COURSE_TEMPLATES = [
-  {
-    course: "Kecerdasan Buatan & Sistem Pakar",
-    code: "IF-3104",
-    lecturer: "Dr. Ir. Budi Santoso, M.Kom.",
-    room: "Lab AI - Gd. C 302",
-    durationHours: 3,
-    color: "blue",
-    sks: 3,
-  },
-  {
-    course: "Sistem Operasi",
-    code: "IF-3101",
-    lecturer: "Dr. Ahmad Fauzi, M.T.",
-    room: "Lab Komputasi Dasar 2",
-    durationHours: 3,
-    color: "emerald",
-    sks: 3,
-  },
-  {
-    course: "Rekayasa Perangkat Lunak",
-    code: "IF-3108",
-    lecturer: "Siti Rahmawati, S.Kom., M.Cs.",
-    room: "Ruang Teori 401",
-    durationHours: 3,
-    color: "indigo",
-    sks: 3,
-  },
-  {
-    course: "Basis Data Lanjut",
-    code: "IF-3102",
-    lecturer: "Prof. Hendra Kusuma",
-    room: "Lab Basis Data 1",
-    durationHours: 3,
-    color: "amber",
-    sks: 3,
-  },
-  {
-    course: "Jaringan Komputer",
-    code: "IF-3103",
-    lecturer: "Ir. Dian Pratama, M.Eng.",
-    room: "Lab Jaringan Gd. D",
-    durationHours: 3,
-    color: "cyan",
-    sks: 3,
-  },
-  {
-    course: "Pemrograman Berorientasi Objek",
-    code: "IF-3105",
-    lecturer: "Eko Prasetyo, M.Kom.",
-    room: "Lab Software 3",
-    durationHours: 3,
-    color: "purple",
-    sks: 3,
-  },
-  {
-    course: "Etika Profesi & Komunikasi",
-    code: "KU-3101",
-    lecturer: "Dra. Ratna Dewi, M.Si.",
-    room: "Auditorium Lt. 2",
-    durationHours: 2,
-    color: "rose",
-    sks: 2,
-  },
-  {
-    course: "Grafika Komputer & Multimedia",
-    code: "IF-3109",
-    lecturer: "Dr. Wahyu Utomo, S.T., M.Sc.",
-    room: "Lab Multimedia Lt. 2",
-    durationHours: 2,
-    color: "teal",
-    sks: 3,
-  },
-];
-
 export default function ScheduleCalendar({
   schedules,
   tasks = [],
@@ -169,12 +94,6 @@ export default function ScheduleCalendar({
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverCell, setDragOverCell] = useState<{ day: string; hour: number } | null>(null);
   const [editingItem, setEditingItem] = useState<ScheduleItem | null>(null);
-
-  // Template Catalog State (Drag & Drop + 1-Tap Touch)
-  const [isTemplateCatalogOpen, setIsTemplateCatalogOpen] = useState(false);
-  const [quickTemplateTarget, setQuickTemplateTarget] = useState<typeof COURSE_TEMPLATES[0] | null>(null);
-  const [quickDay, setQuickDay] = useState("senin");
-  const [quickStartHour, setQuickStartHour] = useState(9);
 
   // Checkbox filters for calendar items
   const [filterCourses, setFilterCourses] = useState(true);
@@ -355,41 +274,6 @@ export default function ScheduleCalendar({
   const handleCellDrop = (e: React.DragEvent, day: string, hour: number) => {
     e.preventDefault();
     setDragOverCell(null);
-
-    // Check if dropping a template JSON
-    const templateData = e.dataTransfer.getData("application/json");
-    if (templateData) {
-      try {
-        const parsed = JSON.parse(templateData);
-        if (parsed.isTemplate && onAddSchedule) {
-          const duration = parsed.durationHours || 2;
-          const endH = Math.min(21, hour + duration);
-          const startStr = `${String(hour).padStart(2, "0")}.00`;
-          const endStr = `${String(endH).padStart(2, "0")}.00`;
-          onAddSchedule({
-            id: `sch-tmpl-${Date.now()}`,
-            course: parsed.course,
-            code: parsed.code || "IF-2026",
-            room: parsed.room,
-            day: day,
-            time: `${startStr} - ${endStr}`,
-            startTime: startStr,
-            endTime: endStr,
-            startHour: hour,
-            durationHours: duration,
-            lecturer: parsed.lecturer,
-            color: parsed.color || "blue",
-            status: "upcoming",
-            attendanceStatus: "pending",
-          });
-          setDraggedItemId(null);
-          return;
-        }
-      } catch (err) {
-        console.error("Failed to parse template drop", err);
-      }
-    }
-
     const itemId = e.dataTransfer.getData("text/plain") || draggedItemId;
     if (itemId) {
       onReschedule(itemId, hour, day);
@@ -427,10 +311,10 @@ export default function ScheduleCalendar({
     const newSched: ScheduleItem = {
       id: `sch-${Date.now()}`,
       course: newCourse.trim(),
-      code: "IF-2026",
-      room: newRoom.trim() || "Ruang Kelas",
+      code: "",
+      room: newRoom.trim() || "-",
       day: newDay,
-      lecturer: newLecturer.trim() || "Dosen Pengampu",
+      lecturer: newLecturer.trim() || "-",
       startTime: newStartTime.trim() || "09.00",
       endTime: newEndTime.trim() || "11.30",
       startHour: parsedHour,
@@ -627,21 +511,6 @@ export default function ScheduleCalendar({
               </button>
             )}
 
-            {/* Tombol Template Matkul */}
-            <button
-              type="button"
-              onClick={() => setIsTemplateCatalogOpen(!isTemplateCatalogOpen)}
-              className={`flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full border transition-all shadow-xs ${
-                isTemplateCatalogOpen
-                  ? "bg-m3-primary-container text-m3-on-primary-container border-m3-primary"
-                  : "bg-m3-surface-container text-m3-on-surface border-m3-outline-variant hover:bg-m3-surface-container-high"
-              }`}
-              title="Buka Katalog Template Matkul & Dosen"
-            >
-              <BookOpen className="w-3.5 h-3.5 text-m3-primary" />
-              <span>Template Matkul</span>
-            </button>
-
             {/* Tombol + Tambah Jadwal */}
             <button
               type="button"
@@ -654,79 +523,6 @@ export default function ScheduleCalendar({
             </button>
           </div>
         </div>
-
-        {/* Collapsible Template Catalog Bar */}
-        {isTemplateCatalogOpen && (
-          <div className="p-3 bg-m3-surface-container/60 border border-m3-outline-variant rounded-2xl space-y-2 animate-in fade-in slide-in-from-top-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-m3-on-surface">
-                <BookOpen className="w-4 h-4 text-m3-primary" />
-                <span>Katalog Template Matkul &amp; Dosen</span>
-                <span className="text-[10px] font-normal text-m3-secondary">
-                  (Drag ke jadwal atau klik &quot;+ Jadwalkan&quot; untuk perangkat sentuh)
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsTemplateCatalogOpen(false)}
-                className="p-1 rounded-full hover:bg-m3-surface-container text-m3-secondary hover:text-m3-on-surface"
-                aria-label="Tutup katalog template"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Template horizontal scroll grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 pt-1 overflow-x-auto touch-pan-x">
-              {COURSE_TEMPLATES.map((tmpl) => (
-                <div
-                  key={tmpl.code}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData(
-                      "application/json",
-                      JSON.stringify({ isTemplate: true, ...tmpl })
-                    );
-                  }}
-                  className="p-2.5 rounded-xl border border-m3-outline-variant bg-white hover:border-m3-primary cursor-grab active:cursor-grabbing shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between gap-1.5"
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center justify-between gap-1">
-                      <span className="text-[10px] font-bold text-m3-primary bg-m3-primary/10 px-1.5 py-0.5 rounded">
-                        {tmpl.code} • {tmpl.sks} SKS
-                      </span>
-                      <GripVertical className="w-3.5 h-3.5 text-m3-secondary/50 cursor-grab" />
-                    </div>
-                    <h4 className="text-xs font-bold text-m3-on-surface truncate pt-1" title={tmpl.course}>
-                      {tmpl.course}
-                    </h4>
-                    <p className="text-[10px] text-m3-secondary truncate flex items-center gap-1 mt-0.5">
-                      <User className="w-2.5 h-2.5 flex-shrink-0" />
-                      <span>{tmpl.lecturer}</span>
-                    </p>
-                    <p className="text-[10px] text-m3-secondary/80 truncate flex items-center gap-1">
-                      <MapPin className="w-2.5 h-2.5 flex-shrink-0" />
-                      <span>{tmpl.room}</span>
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setQuickTemplateTarget(tmpl);
-                      setQuickDay(selectedDay || "senin");
-                      setQuickStartHour(9);
-                    }}
-                    className="w-full mt-1 py-1.5 px-2 rounded-lg bg-m3-primary-container text-m3-on-primary-container hover:bg-m3-primary hover:text-m3-on-primary text-[10px] font-bold transition-colors flex items-center justify-center gap-1 min-h-[36px]"
-                  >
-                    <Plus className="w-3 h-3" />
-                    <span>+ Jadwalkan ({tmpl.durationHours} Jam)</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* VIEW 1: 1 HARI (COMPACT 1 - 24 JAM TIMELINE TANPA BANYAK SCROLL) */}
@@ -797,7 +593,7 @@ export default function ScheduleCalendar({
                               </span>
                             </div>
                             <p className="text-[10px] text-m3-secondary truncate">
-                              {item.room} • {item.lecturer}
+                              {item.room || "-"} • {item.lecturer || "-"}
                             </p>
                           </div>
                         </div>
@@ -980,7 +776,7 @@ export default function ScheduleCalendar({
                             >
                               <span className="truncate leading-tight font-extrabold">{classInCell.course}</span>
                               <div className="flex items-center justify-between text-[8px] opacity-80 pt-0.5">
-                                <span>{classInCell.room.split("-")[0]}</span>
+                                <span>{classInCell.room ? classInCell.room.split("-")[0] : "-"}</span>
                                 <span>{classInCell.startTime}</span>
                               </div>
                             </div>
@@ -1191,9 +987,9 @@ export default function ScheduleCalendar({
                   </label>
                   <input
                     type="text"
-                    value={editingItem.room}
+                    value={editingItem.room || ""}
                     onChange={(e) => setEditingItem({ ...editingItem, room: e.target.value })}
-                    required
+                    placeholder="Contoh: Lab Komputer 1 (opsional)"
                     className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />
                 </div>
@@ -1220,12 +1016,13 @@ export default function ScheduleCalendar({
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-m3-on-surface flex items-center gap-1">
                   <User className="w-3.5 h-3.5 text-m3-secondary" />
-                  <span>Dosen Pengampu</span>
+                  <span>Dosen Pengampu (Opsional)</span>
                 </label>
                 <input
                   type="text"
-                  value={editingItem.lecturer}
+                  value={editingItem.lecturer || ""}
                   onChange={(e) => setEditingItem({ ...editingItem, lecturer: e.target.value })}
+                  placeholder="Nama Dosen (opsional)"
                   className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                 />
               </div>
@@ -1309,94 +1106,38 @@ export default function ScheduleCalendar({
               </button>
             </div>
 
-            {/* Quick Template Chips inside Add Modal */}
-            <div className="space-y-1.5">
-              <label className="text-[11px] font-semibold text-m3-secondary">
-                Atau pilih cepat dari template mata kuliah:
-              </label>
-              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                {COURSE_TEMPLATES.map((tmpl) => (
-                  <button
-                    key={tmpl.code}
-                    type="button"
-                    onClick={() => {
-                      setNewCourse(tmpl.course);
-                      setNewRoom(tmpl.room);
-                      setNewLecturer(tmpl.lecturer);
-                      setNewStartTime("09.00");
-                      setNewEndTime(tmpl.durationHours === 3 ? "12.00" : "11.00");
-                    }}
-                    className="px-2.5 py-1 rounded-full text-[10px] font-medium bg-m3-surface-container border border-m3-outline-variant hover:border-m3-primary hover:bg-m3-primary-container/20 text-m3-on-surface transition-colors"
-                  >
-                    + {tmpl.course}
-                  </button>
-                ))}
-              </div>
-            </div>
-
             <form onSubmit={handleSaveNewSchedule} className="space-y-3.5 text-xs">
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-m3-on-surface flex items-center gap-1">
                   <CalendarIcon className="w-3.5 h-3.5 text-m3-secondary" />
-                  <span>Mata Kuliah</span>
+                  <span>Nama Mata Kuliah</span>
                 </label>
                 <input
                   type="text"
                   value={newCourse}
                   onChange={(e) => setNewCourse(e.target.value)}
-                  placeholder="Contoh: Sistem Operasi"
+                  placeholder="Contoh: Algoritma & Pemrograman"
                   required
                   className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-m3-on-surface flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5 text-m3-secondary" />
-                    <span>Ruang Kelas</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={newRoom}
-                    onChange={(e) => setNewRoom(e.target.value)}
-                    placeholder="Lab AI Gd. C 302"
-                    required
-                    className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-semibold text-m3-on-surface flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5 text-m3-secondary" />
-                    <span>Hari Kuliah</span>
-                  </label>
-                  <select
-                    value={newDay}
-                    onChange={(e) => setNewDay(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none capitalize"
-                  >
-                    {["senin", "selasa", "rabu", "kamis", "jumat", "sabtu"].map((d) => (
-                      <option key={d} value={d}>
-                        {d.charAt(0).toUpperCase() + d.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-m3-on-surface flex items-center gap-1">
-                  <User className="w-3.5 h-3.5 text-m3-secondary" />
-                  <span>Dosen Pengampu</span>
+                  <Clock className="w-3.5 h-3.5 text-m3-secondary" />
+                  <span>Hari Kuliah</span>
                 </label>
-                <input
-                  type="text"
-                  value={newLecturer}
-                  onChange={(e) => setNewLecturer(e.target.value)}
-                  placeholder="Dr. Ahmad Fauzi, M.T."
-                  className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
-                />
+                <select
+                  value={newDay}
+                  onChange={(e) => setNewDay(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none capitalize"
+                >
+                  {["senin", "selasa", "rabu", "kamis", "jumat", "sabtu"].map((d) => (
+                    <option key={d} value={d}>
+                      {d.charAt(0).toUpperCase() + d.slice(1)}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1406,7 +1147,7 @@ export default function ScheduleCalendar({
                     type="text"
                     value={newStartTime}
                     onChange={(e) => setNewStartTime(e.target.value)}
-                    placeholder="09.00"
+                    placeholder="08.00"
                     required
                     className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />
@@ -1418,9 +1159,40 @@ export default function ScheduleCalendar({
                     type="text"
                     value={newEndTime}
                     onChange={(e) => setNewEndTime(e.target.value)}
-                    placeholder="11.30"
+                    placeholder="10.00"
                     required
                     className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Optional Fields: Ruang & Dosen */}
+              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-m3-outline-variant/40">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-m3-secondary flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-m3-secondary" />
+                    <span>Ruang (Opsional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newRoom}
+                    onChange={(e) => setNewRoom(e.target.value)}
+                    placeholder="Contoh: Gd. B 201"
+                    className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/20 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-medium text-m3-secondary flex items-center gap-1">
+                    <User className="w-3 h-3 text-m3-secondary" />
+                    <span>Dosen (Opsional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newLecturer}
+                    onChange={(e) => setNewLecturer(e.target.value)}
+                    placeholder="Nama dosen"
+                    className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/20 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />
                 </div>
               </div>
@@ -1437,127 +1209,10 @@ export default function ScheduleCalendar({
                   type="submit"
                   className="min-h-[44px] px-5 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs"
                 >
-                  Tambahkan Jadwal
+                  Simpan Jadwal
                 </button>
               </div>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL 1-TAP TOUCH SCHEDULE SELECTION (FOR TABLET / MOBILE) */}
-      {quickTemplateTarget && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl border border-m3-outline-variant shadow-xl max-w-sm w-full p-5 space-y-4 animate-in fade-in zoom-in-95">
-            <div className="flex items-center justify-between border-b border-m3-outline-variant/60 pb-3">
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-m3-primary">
-                  Jadwalkan Cepat (Touch Mode)
-                </span>
-                <h3 className="text-sm font-bold text-m3-on-surface truncate">
-                  {quickTemplateTarget.course}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setQuickTemplateTarget(null)}
-                className="p-1 rounded-full hover:bg-m3-surface-container text-m3-secondary"
-                aria-label="Tutup"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div className="p-2.5 rounded-xl bg-m3-surface-container/40 border border-m3-outline-variant/50 space-y-1 text-[11px]">
-                <div className="text-m3-secondary font-medium">Dosen: <span className="text-m3-on-surface font-semibold">{quickTemplateTarget.lecturer}</span></div>
-                <div className="text-m3-secondary font-medium">Ruang: <span className="text-m3-on-surface font-semibold">{quickTemplateTarget.room}</span></div>
-                <div className="text-m3-secondary font-medium">Durasi: <span className="text-m3-on-surface font-semibold">{quickTemplateTarget.durationHours} Jam ({quickTemplateTarget.sks} SKS)</span></div>
-              </div>
-
-              {/* Pilih Hari */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-m3-on-surface">Pilih Hari Kuliah:</label>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {["senin", "selasa", "rabu", "kamis", "jumat", "sabtu"].map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setQuickDay(d)}
-                      className={`min-h-[44px] px-2 py-1.5 rounded-xl text-xs font-bold border transition-colors capitalize ${
-                        quickDay === d
-                          ? "bg-m3-primary text-m3-on-primary border-m3-primary shadow-xs"
-                          : "bg-m3-surface-container/30 text-m3-on-surface border-m3-outline-variant hover:bg-m3-surface-container"
-                      }`}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Pilih Jam Mulai */}
-              <div className="space-y-1.5">
-                <label className="font-bold text-m3-on-surface">Pilih Jam Mulai:</label>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {[7, 8, 9, 10, 11, 13, 14, 15, 16, 17, 18, 19].map((hr) => (
-                    <button
-                      key={hr}
-                      type="button"
-                      onClick={() => setQuickStartHour(hr)}
-                      className={`min-h-[44px] px-2 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
-                        quickStartHour === hr
-                          ? "bg-m3-primary text-m3-on-primary border-m3-primary shadow-xs"
-                          : "bg-m3-surface-container/30 text-m3-on-surface border-m3-outline-variant hover:bg-m3-surface-container"
-                      }`}
-                    >
-                      {String(hr).padStart(2, "0")}.00
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 flex items-center justify-end gap-2 border-t border-m3-outline-variant/60">
-              <button
-                type="button"
-                onClick={() => setQuickTemplateTarget(null)}
-                className="min-h-[44px] px-4 py-2 rounded-full text-xs font-semibold text-m3-secondary hover:bg-m3-surface-container"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (onAddSchedule && quickTemplateTarget) {
-                    const duration = quickTemplateTarget.durationHours || 2;
-                    const endH = Math.min(21, quickStartHour + duration);
-                    const startStr = `${String(quickStartHour).padStart(2, "0")}.00`;
-                    const endStr = `${String(endH).padStart(2, "0")}.00`;
-                    onAddSchedule({
-                      id: `sch-tmpl-${Date.now()}`,
-                      course: quickTemplateTarget.course,
-                      code: quickTemplateTarget.code,
-                      room: quickTemplateTarget.room,
-                      day: quickDay,
-                      time: `${startStr} - ${endStr}`,
-                      startTime: startStr,
-                      endTime: endStr,
-                      startHour: quickStartHour,
-                      durationHours: duration,
-                      lecturer: quickTemplateTarget.lecturer,
-                      color: quickTemplateTarget.color || "blue",
-                      status: "upcoming",
-                      attendanceStatus: "pending",
-                    });
-                  }
-                  setQuickTemplateTarget(null);
-                }}
-                className="min-h-[44px] px-5 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 shadow-xs"
-              >
-                Pasang ke Jadwal
-              </button>
-            </div>
           </div>
         </div>
       )}

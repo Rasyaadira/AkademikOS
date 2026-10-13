@@ -9,7 +9,6 @@ import TaskList from "@/components/TaskList";
 import QuickTaskModal from "@/components/QuickTaskModal";
 import UploadDocModal from "@/components/UploadDocModal";
 import OtherViews, { StudentProfile } from "@/components/OtherViews";
-import LoginPage from "@/components/LoginPage";
 import { TaskItem } from "@/components/ActionDeck";
 import { Menu, X, CalendarDays } from "lucide-react";
 
@@ -19,10 +18,7 @@ export default function HomeDashboard() {
   const [isQuickTaskOpen, setIsQuickTaskOpen] = useState(false);
   const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
-  
-  // Current active student account ID in SQLite - default to student-clean for clean testing!
-  const [currentUserId, setCurrentUserId] = useState<string>("student-clean");
-  const [showLoginPage, setShowLoginPage] = useState<boolean>(false);
+
   const [newUploadedDoc, setNewUploadedDoc] = useState<{
     fileName: string;
     course: string;
@@ -33,27 +29,27 @@ export default function HomeDashboard() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [profile, setProfile] = useState<StudentProfile>({
-    name: "Mahasiswa Baru (Akun Kosong)",
-    nim: "26/512000/TK/00001",
-    email: "mahasiswa.baru@mail.ugm.ac.id",
-    major: "Teknik Informatika",
-    faculty: "Fakultas Teknik",
-    university: "Universitas Gadjah Mada",
+    name: "Mahasiswa",
+    nim: "",
+    email: "",
+    major: "",
+    faculty: "",
+    university: "",
     semester: 1,
-    academicAdvisor: "Dr. Ir. Budi Santoso, M.Kom.",
+    academicAdvisor: "",
     targetGPA: "4.00",
     maxSKS: 24,
   });
 
   const [bannerNotice, setBannerNotice] = useState<string | null>(null);
 
-  // Fetch data from SQLite DB for the given user ID
-  const loadUserData = async (userId: string) => {
+  // Fetch data from SQLite DB for the single user
+  const loadUserData = async () => {
     try {
       const [taskRes, schedRes, profRes] = await Promise.all([
-        fetch(`/api/tasks?userId=${userId}`),
-        fetch(`/api/schedule?userId=${userId}`),
-        fetch(`/api/profile?userId=${userId}`),
+        fetch("/api/tasks"),
+        fetch("/api/schedule"),
+        fetch("/api/profile"),
       ]);
 
       if (taskRes.ok) {
@@ -72,7 +68,9 @@ export default function HomeDashboard() {
 
       if (profRes.ok) {
         const profData = await profRes.json();
-        setProfile(profData);
+        if (profData && profData.name) {
+          setProfile(profData);
+        }
       }
     } catch (err) {
       console.error("Failed to load DB data:", err);
@@ -80,35 +78,8 @@ export default function HomeDashboard() {
   };
 
   useEffect(() => {
-    loadUserData(currentUserId);
-  }, [currentUserId]);
-
-  const handleResetData = async (userId: string) => {
-    try {
-      const res = await fetch(`/api/reset?userId=${userId}`, { method: "POST" });
-      if (res.ok) {
-        setTasks([]);
-        setSchedules([]);
-        setBannerNotice("Data tugas & jadwal akun berhasil dikosongkan.");
-        setTimeout(() => setBannerNotice(null), 3500);
-      }
-    } catch (err) {
-      console.error("Failed to reset data:", err);
-    }
-  };
-
-  const handleRestoreDemo = async () => {
-    try {
-      const res = await fetch(`/api/seed?userId=${currentUserId}`, { method: "POST" });
-      if (res.ok) {
-        await loadUserData(currentUserId);
-        setBannerNotice("Data contoh tugas & jadwal berhasil dipulihkan.");
-        setTimeout(() => setBannerNotice(null), 3500);
-      }
-    } catch (err) {
-      console.error("Failed to restore demo:", err);
-    }
-  };
+    loadUserData();
+  }, []);
 
   // Update task attributes and persist to DB
   const handleUpdateTask = async (id: string, updated: Partial<TaskItem>) => {
@@ -164,8 +135,7 @@ export default function HomeDashboard() {
 
   // Add new task and persist to DB
   const handleAddTask = async (newTask: TaskItem) => {
-    const taskWithUser = { ...newTask, userId: currentUserId };
-    setTasks((prev) => [taskWithUser, ...prev]);
+    setTasks((prev) => [newTask, ...prev]);
     setBannerNotice(`Tugas baru berhasil disimpan ke database (${newTask.difficulty}): "${newTask.title}"`);
     setTimeout(() => setBannerNotice(null), 4000);
 
@@ -173,7 +143,7 @@ export default function HomeDashboard() {
       await fetch("/api/tasks", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(taskWithUser),
+        body: JSON.stringify(newTask),
       });
     } catch (err) {
       console.error("Failed to save task to DB:", err);
@@ -261,8 +231,7 @@ export default function HomeDashboard() {
 
   // Add new schedule handler - persists to DB!
   const handleAddSchedule = async (newSched: ScheduleItem) => {
-    const schedWithUser = { ...newSched, userId: currentUserId };
-    setSchedules((prev) => [...prev, schedWithUser]);
+    setSchedules((prev) => [...prev, newSched]);
     setBannerNotice(`Jadwal baru "${newSched.course}" berhasil ditambahkan.`);
     setTimeout(() => setBannerNotice(null), 4000);
 
@@ -270,7 +239,7 @@ export default function HomeDashboard() {
       await fetch("/api/schedule", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(schedWithUser),
+        body: JSON.stringify(newSched),
       });
     } catch (err) {
       console.error("Failed to add schedule to DB:", err);
@@ -284,7 +253,7 @@ export default function HomeDashboard() {
       await fetch("/api/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...updated, userId: currentUserId }),
+        body: JSON.stringify(updated),
       });
     } catch (err) {
       console.error("Failed to update profile in DB:", err);
@@ -298,7 +267,7 @@ export default function HomeDashboard() {
   };
 
   const handleUploadSuccess = (info: { fileName: string; docType: string; course?: string }) => {
-    const targetCourse = info.course || "Kecerdasan Buatan & Sistem Pakar";
+    const targetCourse = info.course || (schedules[0]?.course || "Mata Kuliah Umum");
     setNewUploadedDoc({
       fileName: info.fileName,
       course: targetCourse,
@@ -311,7 +280,7 @@ export default function HomeDashboard() {
     setTimeout(() => setBannerNotice(null), 6000);
   };
 
-  const firstName = profile.name.split(" ")[0];
+  const firstName = profile.name.split(" ")[0] || "Mahasiswa";
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] text-m3-on-surface flex flex-col md:flex-row antialiased p-2.5 sm:p-3.5 gap-3.5">
@@ -338,8 +307,6 @@ export default function HomeDashboard() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           profile={profile}
-          currentUserId={currentUserId}
-          onOpenLogin={() => setShowLoginPage(true)}
         />
       </div>
 
@@ -358,11 +325,6 @@ export default function HomeDashboard() {
                 setMobileSidebarOpen(false);
               }}
               profile={profile}
-              currentUserId={currentUserId}
-              onOpenLogin={() => {
-                setMobileSidebarOpen(false);
-                setShowLoginPage(true);
-              }}
             />
           </div>
         </div>
@@ -390,7 +352,7 @@ export default function HomeDashboard() {
             <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-3">
                 <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-m3-secondary-container text-m3-on-secondary-container">
-                  Minggu 4
+                  Semester {profile.semester || 1}
                 </span>
                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-m3-on-surface">
                   Halo, {firstName}
@@ -400,7 +362,13 @@ export default function HomeDashboard() {
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-2 text-xs bg-m3-surface-container-low border border-m3-outline-variant px-3 py-1.5 rounded-full">
                   <CalendarDays className="w-3.5 h-3.5 text-m3-secondary" />
-                  <span className="text-m3-on-surface font-semibold">1 Oktober 2026</span>
+                  <span className="text-m3-on-surface font-semibold">
+                    {new Date().toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </span>
                 </div>
               </div>
             </div>
@@ -408,7 +376,11 @@ export default function HomeDashboard() {
             {/* Row 1: Course Card (Col-8) & Action Quick Cards (Col-4) Sejajar */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
               <div className="lg:col-span-8 flex">
-                <CourseCard onOpenRPS={() => setActiveTab("rps")} />
+                <CourseCard
+                  onOpenRPS={() => setActiveTab("rps")}
+                  schedules={schedules}
+                  onOpenCalendar={() => setActiveTab("kalender")}
+                />
               </div>
 
               <div className="lg:col-span-4 flex">
@@ -480,25 +452,6 @@ export default function HomeDashboard() {
         onUploadSuccess={handleUploadSuccess}
         initialFile={droppedFile}
       />
-
-      {/* Login / Switch Account Modal */}
-      {showLoginPage && (
-        <LoginPage
-          currentUserId={currentUserId}
-          onLogin={(userId) => {
-            setCurrentUserId(userId);
-            setShowLoginPage(false);
-            loadUserData(userId);
-            setBannerNotice(
-              `Beralih ke akun: ${userId === "student-clean" ? "Akun Bersih (Kosongan)" : userId}`
-            );
-            setTimeout(() => setBannerNotice(null), 3000);
-          }}
-          onClose={() => setShowLoginPage(false)}
-          onResetData={handleResetData}
-          onRestoreDemo={handleRestoreDemo}
-        />
-      )}
     </div>
   );
 }

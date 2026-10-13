@@ -16,8 +16,12 @@ import {
   Trash2,
   ChevronDown,
   BookOpen,
+  Sparkles,
+  Camera,
+  Loader2,
 } from "lucide-react";
 import { TaskItem } from "./ActionDeck";
+import ImportScheduleModal from "./ImportScheduleModal";
 
 export type CalendarViewMode = "1hari" | "7hari" | "1bulan";
 
@@ -101,14 +105,62 @@ export default function ScheduleCalendar({
   const [filterAgendas, setFilterAgendas] = useState(true);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
-  // Add Schedule Modal state
+  // Add & Import Schedule state
   const [isAddScheduleOpen, setIsAddScheduleOpen] = useState(false);
+  const [isImportScheduleOpen, setIsImportScheduleOpen] = useState(false);
   const [newCourse, setNewCourse] = useState("");
   const [newRoom, setNewRoom] = useState("");
   const [newDay, setNewDay] = useState("kamis");
   const [newLecturer, setNewLecturer] = useState("");
   const [newStartTime, setNewStartTime] = useState("09.00");
   const [newEndTime, setNewEndTime] = useState("11.30");
+
+  const [isExtractingPhoto, setIsExtractingPhoto] = useState(false);
+  const [extractedCandidates, setExtractedCandidates] = useState<any[]>([]);
+  const [photoError, setPhotoError] = useState("");
+
+  const handlePhotoUploadForAdd = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsExtractingPhoto(true);
+    setPhotoError("");
+    setExtractedCandidates([]);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("autoSave", "false");
+
+      const res = await fetch("/api/ai/parse-schedule", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Gagal mengekstrak jadwal dari foto.");
+      }
+
+      if (data.courses && data.courses.length > 0) {
+        setExtractedCandidates(data.courses);
+        const first = data.courses[0];
+        setNewCourse(first.course || "");
+        if (first.day) setNewDay(first.day.toLowerCase());
+        if (first.startTime) setNewStartTime(first.startTime);
+        if (first.endTime) setNewEndTime(first.endTime);
+        if (first.room) setNewRoom(first.room);
+        if (first.lecturer) setNewLecturer(first.lecturer);
+      } else {
+        setPhotoError("Tidak ada mata kuliah yang terdeteksi dalam gambar.");
+      }
+    } catch (err: any) {
+      setPhotoError(err.message || "Gagal memproses gambar jadwal.");
+    } finally {
+      setIsExtractingPhoto(false);
+      e.target.value = "";
+    }
+  };
 
   // Base anchor today: 1 Oktober 2026 (Kamis)
   const BASE_TODAY = new Date(2026, 9, 1);
@@ -177,8 +229,11 @@ export default function ScheduleCalendar({
 
   const getTaskHour = (t: TaskItem): number => {
     const match = (t.deadlineLabel || "").match(/(\d{1,2})[:.](\d{2})/);
-    if (match) return parseInt(match[1], 10);
-    return 23;
+    if (match) {
+      const h = parseInt(match[1], 10);
+      return Math.min(Math.max(h, 7), 21);
+    }
+    return 21;
   };
 
   // Navigation handlers (tombol kanan kiri):
@@ -331,11 +386,11 @@ export default function ScheduleCalendar({
     setNewLecturer("");
   };
 
-  // 1-24 Hours array for Day view
-  const hours24 = Array.from({ length: 24 }, (_, i) => i + 1);
+  // College hours for Day view (07.00 - 21.00 WIB)
+  const collegeHours = Array.from({ length: 15 }, (_, i) => i + 7);
 
-  // Standard daytime hours for 7-day matrix (06.00 - 22.00)
-  const matrixHours = Array.from({ length: 17 }, (_, i) => i + 6);
+  // Standard daytime hours for 7-day matrix (07.00 - 21.00 WIB)
+  const matrixHours = Array.from({ length: 15 }, (_, i) => i + 7);
 
   // Filter schedules for the selected day in 1-day view
   const daySchedules = schedules.filter((s) => s.day === selectedDay);
@@ -500,21 +555,40 @@ export default function ScheduleCalendar({
               )}
             </div>
 
-            {/* Quick Jump to Today: Hanya tampil jika TIDAK di hari ini, tepat di samping Filter */}
+            {/* Quick Jump: Hanya tampil jika TIDAK di periode aktif, tepat di samping Filter */}
             {!isViewingToday && (
               <button
                 type="button"
                 onClick={handleJumpToToday}
-                className="text-[11px] font-semibold px-3 py-1 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-high border border-m3-outline-variant text-m3-primary hover:text-m3-on-surface transition-colors shadow-2xs"
+                className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-700 transition-all shadow-xs flex items-center gap-1 active:scale-95"
+                title={`Lompat kembali ke ${viewMode === "1hari" ? "Hari Ini" : viewMode === "7hari" ? "Minggu Ini" : "Bulan Ini"}`}
               >
-                Hari Ini
+                <CalendarIcon className="w-3 h-3 text-blue-600" />
+                <span>{viewMode === "1hari" ? "Hari Ini" : viewMode === "7hari" ? "Minggu Ini" : "Bulan Ini"}</span>
+              </button>
+            )}
+
+            {/* Tombol Impor Jadwal AI (Hanya jika jadwal masih kosong) */}
+            {schedules.length === 0 && (
+              <button
+                type="button"
+                onClick={() => setIsImportScheduleOpen(true)}
+                className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all shadow-2xs"
+                title="Unggah berkas PDF atau foto jadwal kuliah untuk diekstrak otomatis dengan Gemini AI"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Impor AI</span>
               </button>
             )}
 
             {/* Tombol + Tambah Jadwal */}
             <button
               type="button"
-              onClick={() => setIsAddScheduleOpen(true)}
+              onClick={() => {
+                setExtractedCandidates([]);
+                setPhotoError("");
+                setIsAddScheduleOpen(true);
+              }}
               className="flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs"
               title="Tambah Jadwal Perkuliahan Baru"
             >
@@ -525,12 +599,44 @@ export default function ScheduleCalendar({
         </div>
       </div>
 
-      {/* VIEW 1: 1 HARI (COMPACT 1 - 24 JAM TIMELINE TANPA BANYAK SCROLL) */}
+      {/* BANNER JIKA JADWAL KOSONG */}
+      {schedules.length === 0 && (
+        <div className="p-5 sm:p-6 rounded-3xl bg-white border border-dashed border-m3-outline-variant text-center space-y-3 shadow-xs">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div className="max-w-md mx-auto space-y-1">
+            <h4 className="text-sm font-bold text-m3-on-surface">Jadwal Perkuliahan Masih Kosong</h4>
+            <p className="text-xs text-m3-secondary leading-relaxed">
+              Mulai isi jadwal Anda dengan menambahkan manual satu per satu, atau gunakan fitur Impor AI untuk mengekstrak langsung dari berkas PDF atau foto jadwal kuliah Anda.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setIsImportScheduleOpen(true)}
+              className="px-4 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5"
+            >
+              <Sparkles className="w-4 h-4" />
+              <span>✨ Impor Jadwal AI (PDF / Gambar)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddScheduleOpen(true)}
+              className="px-4 py-2 rounded-full text-xs font-semibold bg-m3-surface-container hover:bg-m3-surface-container-high text-m3-on-surface border border-m3-outline-variant transition-colors"
+            >
+              + Tambah Manual
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* VIEW 1: 1 HARI (JAM KULIAH 07.00 - 21.00 WIB) */}
       {viewMode === "1hari" && (
         <div className="flex-1 flex flex-col min-h-0 space-y-2">
-          {/* 1 - 24 Hours Drag & Drop Container with Compact Density */}
+          {/* College Hours Drag & Drop Container */}
           <div className="flex-1 overflow-y-auto pr-1 space-y-1 border border-m3-outline-variant/60 rounded-2xl p-2 bg-m3-surface-container/20">
-            {hours24.map((hour) => {
+            {collegeHours.map((hour) => {
               const hourLabel = `${String(hour).padStart(2, "0")}.00`;
               const matchedClasses = filterCourses ? daySchedules.filter((s) => s.startHour === hour) : [];
               const matchedTasks = filterTasks
@@ -1105,6 +1211,70 @@ export default function ScheduleCalendar({
                 <X className="w-4 h-4" />
               </button>
             </div>
+            {/* Quick Autofill from Photo / Image */}
+            <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
+                  <Camera className="w-3.5 h-3.5 text-indigo-600" />
+                  <span>Isi dari Foto / Gambar Jadwal</span>
+                </span>
+                <label className="cursor-pointer px-3 py-1 rounded-full bg-white hover:bg-indigo-100 border border-indigo-300 text-indigo-700 text-[10px] font-bold shadow-2xs transition-all flex items-center gap-1">
+                  {isExtractingPhoto ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
+                      <span>Menganalisis...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-indigo-600" />
+                      <span>Pilih Foto</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    disabled={isExtractingPhoto}
+                    onChange={handlePhotoUploadForAdd}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              {photoError && (
+                <p className="text-[10px] text-rose-600 font-medium">{photoError}</p>
+              )}
+
+              {extractedCandidates.length > 1 && (
+                <div className="pt-1.5 border-t border-indigo-200/60 space-y-1">
+                  <p className="text-[10px] font-medium text-indigo-800">
+                    Ditemukan {extractedCandidates.length} mata kuliah dari gambar. Klik untuk memilih:
+                  </p>
+                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                    {extractedCandidates.map((c, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setNewCourse(c.course || "");
+                          if (c.day) setNewDay(c.day.toLowerCase());
+                          if (c.startTime) setNewStartTime(c.startTime);
+                          if (c.endTime) setNewEndTime(c.endTime);
+                          if (c.room) setNewRoom(c.room);
+                          if (c.lecturer) setNewLecturer(c.lecturer);
+                        }}
+                        className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border transition-all ${
+                          newCourse === c.course
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                        }`}
+                      >
+                        {c.course} ({c.day} {c.startTime})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
             <form onSubmit={handleSaveNewSchedule} className="space-y-3.5 text-xs">
               <div className="space-y-1">
@@ -1216,6 +1386,15 @@ export default function ScheduleCalendar({
           </div>
         </div>
       )}
+
+      {/* MODAL IMPOR JADWAL DENGAN GEMINI AI */}
+      <ImportScheduleModal
+        isOpen={isImportScheduleOpen}
+        onClose={() => setIsImportScheduleOpen(false)}
+        onScheduleImported={(newItems) => {
+          newItems.forEach((item) => onAddSchedule?.(item));
+        }}
+      />
     </div>
   );
 }

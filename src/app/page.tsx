@@ -9,6 +9,7 @@ import TaskList from "@/components/TaskList";
 import QuickTaskModal from "@/components/QuickTaskModal";
 import UploadDocModal from "@/components/UploadDocModal";
 import OtherViews, { StudentProfile } from "@/components/OtherViews";
+import LoginPage from "@/components/LoginPage";
 import { TaskItem } from "@/components/ActionDeck";
 import { Menu, X, CalendarDays } from "lucide-react";
 
@@ -19,22 +20,28 @@ export default function HomeDashboard() {
   const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
   
-  // Current active student account ID in SQLite
-  const [currentUserId] = useState<string>("student-1");
+  // Current active student account ID in SQLite - default to student-clean for clean testing!
+  const [currentUserId, setCurrentUserId] = useState<string>("student-clean");
+  const [showLoginPage, setShowLoginPage] = useState<boolean>(false);
+  const [newUploadedDoc, setNewUploadedDoc] = useState<{
+    fileName: string;
+    course: string;
+    docType: string;
+  } | null>(null);
 
   // Data states connected to SQLite DB
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [schedules, setSchedules] = useState<ScheduleItem[]>([]);
   const [profile, setProfile] = useState<StudentProfile>({
-    name: "Faras Pratama",
-    nim: "23/512948/TK/54321",
-    email: "faras.pratama@mail.ugm.ac.id",
+    name: "Mahasiswa Baru (Akun Kosong)",
+    nim: "26/512000/TK/00001",
+    email: "mahasiswa.baru@mail.ugm.ac.id",
     major: "Teknik Informatika",
     faculty: "Fakultas Teknik",
     university: "Universitas Gadjah Mada",
-    semester: 5,
+    semester: 1,
     academicAdvisor: "Dr. Ir. Budi Santoso, M.Kom.",
-    targetGPA: "3.85",
+    targetGPA: "4.00",
     maxSKS: 24,
   });
 
@@ -52,11 +59,15 @@ export default function HomeDashboard() {
       if (taskRes.ok) {
         const taskData = await taskRes.json();
         setTasks(taskData);
+      } else {
+        setTasks([]);
       }
 
       if (schedRes.ok) {
         const schedData = await schedRes.json();
         setSchedules(schedData);
+      } else {
+        setSchedules([]);
       }
 
       if (profRes.ok) {
@@ -71,6 +82,33 @@ export default function HomeDashboard() {
   useEffect(() => {
     loadUserData(currentUserId);
   }, [currentUserId]);
+
+  const handleResetData = async (userId: string) => {
+    try {
+      const res = await fetch(`/api/reset?userId=${userId}`, { method: "POST" });
+      if (res.ok) {
+        setTasks([]);
+        setSchedules([]);
+        setBannerNotice("Data tugas & jadwal akun berhasil dikosongkan.");
+        setTimeout(() => setBannerNotice(null), 3500);
+      }
+    } catch (err) {
+      console.error("Failed to reset data:", err);
+    }
+  };
+
+  const handleRestoreDemo = async () => {
+    try {
+      const res = await fetch(`/api/seed?userId=${currentUserId}`, { method: "POST" });
+      if (res.ok) {
+        await loadUserData(currentUserId);
+        setBannerNotice("Data contoh tugas & jadwal berhasil dipulihkan.");
+        setTimeout(() => setBannerNotice(null), 3500);
+      }
+    } catch (err) {
+      console.error("Failed to restore demo:", err);
+    }
+  };
 
   // Update task attributes and persist to DB
   const handleUpdateTask = async (id: string, updated: Partial<TaskItem>) => {
@@ -259,9 +297,18 @@ export default function HomeDashboard() {
     setIsUploadDocOpen(true);
   };
 
-  const handleUploadSuccess = (info: { fileName: string; docType: string }) => {
-    setBannerNotice(`Dokumen "${info.fileName}" (${info.docType}) berhasil disinkronkan ke jadwal.`);
-    setTimeout(() => setBannerNotice(null), 5000);
+  const handleUploadSuccess = (info: { fileName: string; docType: string; course?: string }) => {
+    const targetCourse = info.course || "Kecerdasan Buatan & Sistem Pakar";
+    setNewUploadedDoc({
+      fileName: info.fileName,
+      course: targetCourse,
+      docType: info.docType,
+    });
+    setActiveTab("rps");
+    setBannerNotice(
+      `Dokumen "${info.fileName}" (${info.docType}) berhasil diunggah dan otomatis ditempatkan di RPS & Materi perkuliahan ${targetCourse}.`
+    );
+    setTimeout(() => setBannerNotice(null), 6000);
   };
 
   const firstName = profile.name.split(" ")[0];
@@ -291,6 +338,8 @@ export default function HomeDashboard() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           profile={profile}
+          currentUserId={currentUserId}
+          onOpenLogin={() => setShowLoginPage(true)}
         />
       </div>
 
@@ -309,6 +358,11 @@ export default function HomeDashboard() {
                 setMobileSidebarOpen(false);
               }}
               profile={profile}
+              currentUserId={currentUserId}
+              onOpenLogin={() => {
+                setMobileSidebarOpen(false);
+                setShowLoginPage(true);
+              }}
             />
           </div>
         </div>
@@ -405,6 +459,7 @@ export default function HomeDashboard() {
             onDeleteTask={handleDeleteTask}
             onOpenQuickTask={() => setIsQuickTaskOpen(true)}
             onUpdateTask={handleUpdateTask}
+            newUploadedDoc={newUploadedDoc}
           />
         )}
       </main>
@@ -425,6 +480,25 @@ export default function HomeDashboard() {
         onUploadSuccess={handleUploadSuccess}
         initialFile={droppedFile}
       />
+
+      {/* Login / Switch Account Modal */}
+      {showLoginPage && (
+        <LoginPage
+          currentUserId={currentUserId}
+          onLogin={(userId) => {
+            setCurrentUserId(userId);
+            setShowLoginPage(false);
+            loadUserData(userId);
+            setBannerNotice(
+              `Beralih ke akun: ${userId === "student-clean" ? "Akun Bersih (Kosongan)" : userId}`
+            );
+            setTimeout(() => setBannerNotice(null), 3000);
+          }}
+          onClose={() => setShowLoginPage(false)}
+          onResetData={handleResetData}
+          onRestoreDemo={handleRestoreDemo}
+        />
+      )}
     </div>
   );
 }

@@ -156,6 +156,7 @@ interface OtherViewsProps {
   onDeleteTask?: (id: string) => void;
   onOpenQuickTask?: () => void;
   onUpdateTask?: (id: string, updated: Partial<TaskItem>) => void;
+  newUploadedDoc?: { fileName: string; course: string; docType: string } | null;
 }
 
 // Data structures for RPS Folder Tree & Document Preview (40/60)
@@ -425,16 +426,74 @@ export default function OtherViews({
   onDeleteTask,
   onOpenQuickTask,
   onUpdateTask,
+  newUploadedDoc,
 }: OtherViewsProps) {
   // Akun Step state
   const [akunStep, setAkunStep] = useState<1 | 2 | 3>(1);
   const [formData, setFormData] = useState<StudentProfile>(profile);
   const [isSaved, setIsSaved] = useState(false);
 
-  // RPS Folder & Document Preview state (40/60 Split)
+  // Dynamic RPS Folder & Document Preview state (40/60 Split)
+  const [rpsFolders, setRpsFolders] = useState<CourseFolder[]>(initialFolders);
   const [openRpsFolderId, setOpenRpsFolderId] = useState<string>("f-ai");
   const [selectedFileId, setSelectedFileId] = useState<string>("doc-ai-1");
   const [rpsSearchQuery, setRpsSearchQuery] = useState("");
+
+  // Sync newly uploaded document directly into matching course folder in RPS
+  React.useEffect(() => {
+    if (newUploadedDoc) {
+      const courseNorm = (newUploadedDoc.course || "").trim().toLowerCase();
+      const newFileId = `doc-up-${Date.now()}`;
+      const ext = newUploadedDoc.fileName.endsWith(".pptx")
+        ? "pptx"
+        : newUploadedDoc.fileName.endsWith(".docx")
+        ? "docx"
+        : "pdf";
+
+      const newFile: FileItem = {
+        id: newFileId,
+        name: newUploadedDoc.fileName,
+        type: ext,
+        updated: "Hari ini",
+        description: `Dokumen baru diunggah untuk ${newUploadedDoc.course}. Telah otomatis tersambung ke RPS & materi perkuliahan.`,
+        sessions: [
+          {
+            no: 1,
+            topic: `Berkas Masuk: ${newUploadedDoc.fileName}`,
+            subtopics: `Dokumen ${newUploadedDoc.docType.toUpperCase()} berhasil diklasifikasikan ke ${newUploadedDoc.course}. Siap dipelajari dan dianalisis.`,
+          },
+        ],
+      };
+
+      setRpsFolders((prev) => {
+        const foundIdx = prev.findIndex(
+          (f) =>
+            f.courseName.toLowerCase().includes(courseNorm) ||
+            (courseNorm.length > 2 && courseNorm.includes(f.courseName.toLowerCase()))
+        );
+        if (foundIdx >= 0) {
+          const updated = [...prev];
+          updated[foundIdx] = {
+            ...updated[foundIdx],
+            files: [newFile, ...updated[foundIdx].files],
+          };
+          setOpenRpsFolderId(updated[foundIdx].id);
+          setSelectedFileId(newFileId);
+          return updated;
+        } else {
+          const newFolder: CourseFolder = {
+            id: `f-${Date.now()}`,
+            courseName: newUploadedDoc.course || "Mata Kuliah Umum",
+            lecturer: "Dosen Pengampu",
+            files: [newFile],
+          };
+          setOpenRpsFolderId(newFolder.id);
+          setSelectedFileId(newFileId);
+          return [newFolder, ...prev];
+        }
+      });
+    }
+  }, [newUploadedDoc]);
 
   // Obsidian-like Catatan Kuliah state with COLLAPSIBLE FOLDERS
   const [noteFolders, setNoteFolders] = useState<NoteFolder[]>(initialNoteFolders);
@@ -628,9 +687,9 @@ export default function OtherViews({
   };
 
   // Find currently active file in RPS
-  const allRpsFiles = initialFolders.flatMap((f) => f.files);
-  const currentDoc = allRpsFiles.find((f) => f.id === selectedFileId) || initialFolders[0].files[0];
-  const currentFolder = initialFolders.find((f) => f.files.some((fl) => fl.id === currentDoc.id)) || initialFolders[0];
+  const allRpsFiles = rpsFolders.flatMap((f) => f.files);
+  const currentDoc = allRpsFiles.find((f) => f.id === selectedFileId) || (rpsFolders[0]?.files[0] ?? null);
+  const currentFolder = rpsFolders.find((f) => f.files.some((fl) => fl.id === currentDoc?.id)) || rpsFolders[0];
 
   return (
     <section className="flex-1 bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-7 space-y-5 shadow-xs flex flex-col">
@@ -639,7 +698,7 @@ export default function OtherViews({
         <div>
           <button
             onClick={onBackToHome}
-            className="text-xs font-semibold text-m3-secondary hover:text-m3-on-surface mb-1.5 flex items-center gap-1 transition-colors"
+            className="min-h-[44px] text-xs font-semibold text-m3-secondary hover:text-m3-on-surface mb-1 flex items-center gap-1 transition-colors"
           >
             ← Kembali ke Dashboard Home
           </button>
@@ -994,7 +1053,7 @@ export default function OtherViews({
           <div className="lg:col-span-4 bg-white border border-m3-outline-variant rounded-3xl p-4 sm:p-5 flex flex-col space-y-3.5 shadow-xs h-full overflow-hidden">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-m3-on-surface">Folder Materi & RPS</h3>
-              <span className="text-[11px] text-m3-secondary font-medium">{initialFolders.length} Mata Kuliah</span>
+              <span className="text-[11px] text-m3-secondary font-medium">{rpsFolders.length} Mata Kuliah</span>
             </div>
 
             <div className="relative">
@@ -1009,7 +1068,7 @@ export default function OtherViews({
             </div>
 
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-              {initialFolders.map((folder) => {
+              {rpsFolders.map((folder) => {
                 const isOpen = openRpsFolderId === folder.id;
                 const folderFiles = folder.files.filter((f) =>
                   rpsSearchQuery
@@ -1104,37 +1163,45 @@ export default function OtherViews({
 
           {/* KOLOM KANAN (65%): PREVIEW DOKUMEN AKADEMIK SEBENARNYA */}
           <div className="lg:col-span-8 bg-white border border-m3-outline-variant rounded-3xl p-5 sm:p-6 flex flex-col space-y-4 shadow-xs h-full overflow-hidden">
-            {/* Header Toolbar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-m3-outline-variant">
-              <div className="flex items-start gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-2xl bg-m3-surface-container flex items-center justify-center flex-shrink-0 text-m3-primary border border-m3-outline-variant">
-                  {currentDoc.type === "pdf" ? (
-                    <FileText className="w-5 h-5 text-rose-600" />
-                  ) : (
-                    <Presentation className="w-5 h-5 text-amber-600" />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm sm:text-base font-bold text-m3-on-surface truncate">
-                    {currentDoc.name}
-                  </h3>
-                  <p className="text-xs text-m3-secondary truncate">
-                    {currentFolder.courseName}
-                  </p>
-                </div>
+            {!currentDoc ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-m3-secondary">
+                <FileText className="w-12 h-12 stroke-[1.5] mb-2 opacity-50" />
+                <p className="text-sm font-semibold text-m3-on-surface">Belum ada dokumen yang dipilih</p>
+                <p className="text-xs text-m3-secondary/80 mt-1">Pilih salah satu berkas di sebelah kiri atau unggah dokumen materi baru.</p>
               </div>
+            ) : (
+              <>
+                {/* Header Toolbar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-m3-outline-variant">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-2xl bg-m3-surface-container flex items-center justify-center flex-shrink-0 text-m3-primary border border-m3-outline-variant">
+                      {currentDoc.type === "pdf" ? (
+                        <FileText className="w-5 h-5 text-rose-600" />
+                      ) : (
+                        <Presentation className="w-5 h-5 text-amber-600" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-sm sm:text-base font-bold text-m3-on-surface truncate">
+                        {currentDoc.name}
+                      </h3>
+                      <p className="text-xs text-m3-secondary truncate">
+                        {currentFolder?.courseName || "Materi Kuliah"}
+                      </p>
+                    </div>
+                  </div>
 
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={() => alert(`Mengunduh berkas ${currentDoc.name}`)}
-                  className="px-3.5 py-1.5 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-high text-xs font-semibold text-m3-on-surface border border-m3-outline-variant flex items-center gap-1.5 transition-colors"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Unduh</span>
-                </button>
-              </div>
-            </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => alert(`Mengunduh berkas ${currentDoc.name}`)}
+                      className="min-h-[44px] px-3.5 py-1.5 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-high text-xs font-semibold text-m3-on-surface border border-m3-outline-variant flex items-center gap-1.5 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Unduh</span>
+                    </button>
+                  </div>
+                </div>
 
             {/* LEMBAR PREVIEW DOKUMEN ASLI (SEPERTI PDF VIEWER KERTAS RESMI) */}
             <div className="flex-1 overflow-y-auto p-5 sm:p-7 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-5 text-m3-on-surface shadow-inner font-sans">
@@ -1228,6 +1295,8 @@ export default function OtherViews({
                 </div>
               </div>
             </div>
+            </>
+            )}
           </div>
         </div>
       )}

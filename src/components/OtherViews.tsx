@@ -86,17 +86,27 @@ interface OtherViewsProps {
   onDeleteTask?: (id: string) => void;
   onOpenQuickTask?: () => void;
   onUpdateTask?: (id: string, updated: Partial<TaskItem>) => void;
-  newUploadedDoc?: { fileName: string; course: string; docType: string } | null;
+  newUploadedDoc?: {
+    fileName: string;
+    course: string;
+    docType: string;
+    filePath?: string;
+    sessionNo?: number;
+    topic?: string;
+  } | null;
 }
 
 // Data structures for RPS Folder Tree & Document Preview (40/60)
 interface FileItem {
   id: string;
   name: string;
-  type: "pdf" | "pptx" | "docx";
+  type: "pdf" | "pptx" | "docx" | "jpg" | "png";
   updated: string;
   description: string;
-  sessions: {
+  filePath?: string;
+  sessionNo?: number;
+  topic?: string;
+  sessions?: {
     no: number;
     topic: string;
     subtopics: string;
@@ -168,23 +178,33 @@ export default function OtherViews({
     if (newUploadedDoc) {
       const courseNorm = (newUploadedDoc.course || "").trim().toLowerCase();
       const newFileId = `doc-up-${Date.now()}`;
-      const ext = newUploadedDoc.fileName.endsWith(".pptx")
+      const lower = newUploadedDoc.fileName.toLowerCase();
+      const ext = lower.endsWith(".pptx")
         ? "pptx"
-        : newUploadedDoc.fileName.endsWith(".docx")
+        : lower.endsWith(".docx")
         ? "docx"
+        : lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+        ? "jpg"
+        : lower.endsWith(".png")
+        ? "png"
         : "pdf";
+
+      const filePath = newUploadedDoc.filePath || `/storage/${newUploadedDoc.fileName}`;
 
       const newFile: FileItem = {
         id: newFileId,
         name: newUploadedDoc.fileName,
         type: ext,
         updated: "Hari ini",
-        description: `Dokumen baru diunggah untuk ${newUploadedDoc.course}. Telah otomatis tersambung ke RPS & materi perkuliahan.`,
+        filePath: filePath,
+        sessionNo: newUploadedDoc.sessionNo,
+        topic: newUploadedDoc.topic,
+        description: `Dokumen ${newUploadedDoc.docType} untuk ${newUploadedDoc.course}.`,
         sessions: [
           {
-            no: 1,
-            topic: `Berkas Masuk: ${newUploadedDoc.fileName}`,
-            subtopics: `Dokumen ${newUploadedDoc.docType.toUpperCase()} berhasil diklasifikasikan ke ${newUploadedDoc.course}. Siap dipelajari dan dianalisis.`,
+            no: newUploadedDoc.sessionNo || 1,
+            topic: newUploadedDoc.topic || newUploadedDoc.fileName,
+            subtopics: `Kategori: ${newUploadedDoc.docType}. Tersimpan di server lokal.`,
           },
         ],
       };
@@ -226,6 +246,18 @@ export default function OtherViews({
   const [noteEditMode, setNoteEditMode] = useState<"edit" | "preview">("edit");
   const [isEditorFullscreen, setIsEditorFullscreen] = useState(false);
   const [noteSearchQuery, setNoteSearchQuery] = useState("");
+
+  // Hide lecturer photos preference state
+  const [hideLecturerPhotos, setHideLecturerPhotos] = useState(false);
+
+  // Helper to reliably construct non-404 file URLs
+  const getDocFileUrl = (doc: { filePath?: string; name: string }) => {
+    const raw = doc.filePath || `/storage/${doc.name}`;
+    if (raw.startsWith("/storage/")) {
+      return `/api/storage/${raw.replace("/storage/", "")}`;
+    }
+    return raw;
+  };
 
   // Course & Lecturer state for Matkul tab (synchronizes from schedules)
   const [courseLecturers, setCourseLecturers] = useState<CourseLecturerItem[]>(initialCourseLecturers);
@@ -1011,110 +1043,88 @@ export default function OtherViews({
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => alert(`Mengunduh berkas ${currentDoc.name}`)}
+                    <a
+                      href={getDocFileUrl(currentDoc)}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="min-h-[44px] px-3.5 py-1.5 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-high text-xs font-semibold text-m3-on-surface border border-m3-outline-variant flex items-center gap-1.5 transition-colors"
+                      title="Buka dokumen di tab baru"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5 text-m3-secondary" />
+                      <span>Buka di Tab Baru</span>
+                    </a>
+                    <a
+                      href={getDocFileUrl(currentDoc)}
+                      download={currentDoc.name}
+                      className="min-h-[44px] px-4 py-1.5 rounded-full bg-m3-primary hover:brightness-95 text-xs font-semibold text-m3-on-primary flex items-center gap-1.5 transition-all shadow-xs"
+                      title="Unduh berkas asli"
                     >
                       <Download className="w-3.5 h-3.5" />
                       <span>Unduh</span>
-                    </button>
+                    </a>
                   </div>
                 </div>
 
-            {/* LEMBAR PREVIEW DOKUMEN ASLI (SEPERTI PDF VIEWER KERTAS RESMI) */}
-            <div className="flex-1 overflow-y-auto p-5 sm:p-7 rounded-2xl bg-slate-50 border border-slate-200/90 space-y-5 text-m3-on-surface shadow-inner font-sans">
-              {/* Kop Dokumen Akademik Resmi */}
-              <div className="text-center pb-4 border-b-2 border-slate-300 space-y-1">
-                <h4 className="text-xs font-extrabold uppercase tracking-widest text-slate-800">
-                  {formData.university || profile.university || "UNIVERSITAS"} {formData.faculty ? `• ${formData.faculty.toUpperCase()}` : ""}
-                </h4>
-                <p className="text-[11px] font-semibold text-slate-600">
-                  {formData.major ? `PROGRAM STUDI ${formData.major.toUpperCase()}` : "DOKUMEN PEMBELAJARAN RESMI"}
-                </p>
-                <div className="pt-2">
-                  <span className="px-3 py-1 bg-white border border-slate-300 rounded-full text-xs font-bold uppercase tracking-wider text-slate-900 inline-block shadow-xs">
-                    {currentDoc.type === "pdf" ? "RENCANA PEMBELAJARAN SEMESTER (RPS)" : "SLIDE BAHAN AJAR"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Detail Dokumen Resmi */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-                <div>
-                  <span className="text-[10px] text-m3-secondary block">Mata Kuliah</span>
-                  <span className="font-bold text-slate-900">{currentFolder?.courseName || "-"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-m3-secondary block">Program Studi / Fakultas</span>
-                  <span className="font-bold text-slate-900">{formData.major || formData.faculty || "-"}</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-m3-secondary block">Semester / Beban</span>
-                  <span className="font-semibold text-slate-800">Semester Gasal • 3 SKS</span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-m3-secondary block">Status Dokumen</span>
-                  <span className="font-semibold text-emerald-700">Terverifikasi Akademik</span>
-                </div>
-              </div>
-
-              {/* Matriks 14 Pertemuan Lengkap */}
-              <div className="space-y-2.5">
-                <h5 className="text-xs font-bold text-slate-900 flex items-center justify-between border-b pb-1">
-                  <span>Matriks Perkuliahan (14 Sesi)</span>
-                  <span className="text-[10px] text-m3-secondary font-normal">Semester Gasal 2026</span>
-                </h5>
-
-                <div className="space-y-2">
-                  {currentDoc.sessions.map((ses) => (
-                    <div
-                      key={ses.no}
-                      className="p-3 rounded-xl border border-slate-200 bg-white hover:border-slate-300 transition-colors flex items-start gap-3 shadow-xs"
-                    >
-                      <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                        {ses.no}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <h6 className="text-xs font-bold text-slate-900">{ses.topic}</h6>
-                          {ses.weight && (
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 flex-shrink-0">
-                              {ses.weight}
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-[11px] text-slate-600 mt-0.5 leading-relaxed">{ses.subtopics}</p>
+                {/* AS-IS VIEWER: FISIK BERKAS ASLI (PDF, GAMBAR, ATAU OFFICE) */}
+                <div className="flex-1 w-full h-full min-h-[480px] rounded-2xl border border-m3-outline-variant bg-slate-100 flex flex-col overflow-hidden relative shadow-inner">
+                  {currentDoc.type === "pdf" || currentDoc.name.toLowerCase().endsWith(".pdf") ? (
+                    <iframe
+                      src={getDocFileUrl(currentDoc)}
+                      className="w-full h-full min-h-[480px] border-0 bg-white"
+                      title={currentDoc.name}
+                    />
+                  ) : currentDoc.type === "jpg" || currentDoc.type === "png" || currentDoc.name.toLowerCase().match(/\.(jpe?g|png|webp)$/i) ? (
+                    <div className="w-full h-full min-h-[480px] flex items-center justify-center p-4 bg-slate-900/5 overflow-auto">
+                      <img
+                        src={getDocFileUrl(currentDoc)}
+                        alt={currentDoc.name}
+                        className="max-h-[580px] max-w-full object-contain rounded-xl shadow-md border border-slate-200"
+                      />
+                    </div>
+                  ) : (
+                    <div className="w-full h-full min-h-[480px] flex flex-col items-center justify-center p-8 bg-white text-center space-y-4">
+                      <div className="w-16 h-16 rounded-3xl bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center shadow-xs">
+                        {currentDoc.type === "pptx" || currentDoc.name.toLowerCase().endsWith(".pptx") ? (
+                          <Presentation className="w-8 h-8 text-amber-600" />
+                        ) : (
+                          <FileText className="w-8 h-8 text-blue-600" />
+                        )}
+                      </div>
+                      <div className="max-w-md space-y-1.5">
+                        <h4 className="text-base font-bold text-m3-on-surface">{currentDoc.name}</h4>
+                        <p className="text-xs text-m3-secondary leading-relaxed">
+                          Dokumen perkuliahan berformat {currentDoc.name.split(".").pop()?.toUpperCase() || "Office"}. Berkas ini tersimpan aman di server lokal dan siap dibuka di aplikasi dokumen komputer Anda.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 pt-2">
+                        <a
+                          href={getDocFileUrl(currentDoc)}
+                          download={currentDoc.name}
+                          className="min-h-[44px] px-6 py-2.5 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs flex items-center gap-2"
+                        >
+                          <Download className="w-4 h-4" />
+                          <span>Unduh Berkas</span>
+                        </a>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              </div>
 
-              {/* Komponen Evaluasi */}
-              <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 shadow-xs text-xs">
-                <h6 className="font-bold text-slate-900">Komposisi Evaluasi & Penilaian</h6>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-[11px]">
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                    <span className="text-m3-secondary block">UTS</span>
-                    <span className="font-bold text-slate-900">30%</span>
+                {/* METADATA DOKUMEN ASLI (TANPA KOP SURAT TIRUAN) */}
+                <div className="p-3 bg-m3-surface-container-low border border-m3-outline-variant rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-m3-on-surface">{currentDoc.name}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-m3-primary border border-m3-outline-variant uppercase">
+                      {currentDoc.name.split(".").pop() || currentDoc.type}
+                    </span>
                   </div>
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                    <span className="text-m3-secondary block">UAS</span>
-                    <span className="font-bold text-slate-900">30%</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                    <span className="text-m3-secondary block">Praktikum</span>
-                    <span className="font-bold text-slate-900">20%</span>
-                  </div>
-                  <div className="p-2 rounded-lg bg-slate-50 border border-slate-200">
-                    <span className="text-m3-secondary block">Tugas</span>
-                    <span className="font-bold text-slate-900">20%</span>
+                  <div className="flex items-center gap-3 text-m3-secondary text-[11px]">
+                    <span>Lokasi: {getDocFileUrl(currentDoc)}</span>
+                    <span>•</span>
+                    <span>Diperbarui: {currentDoc.updated}</span>
                   </div>
                 </div>
-              </div>
-            </div>
-            </>
+              </>
             )}
           </div>
         </div>
@@ -1356,6 +1366,18 @@ export default function OtherViews({
                   <span className="text-m3-secondary">Peringatan tenggat tugas kuliah (H-1)</span>
                   <input type="checkbox" defaultChecked className="w-4 h-4 rounded-md accent-m3-primary" />
                 </label>
+                <label className="flex items-center justify-between cursor-pointer pt-1.5 border-t border-slate-100">
+                  <div>
+                    <span className="text-xs font-semibold text-m3-on-surface block">Sembunyikan Foto Dosen</span>
+                    <span className="text-[11px] text-m3-secondary">Tampilkan kartu mata kuliah ringkas tanpa foto wajah dosen</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={hideLecturerPhotos}
+                    onChange={(e) => setHideLecturerPhotos(e.target.checked)}
+                    className="w-4 h-4 rounded-md accent-m3-primary cursor-pointer"
+                  />
+                </label>
               </div>
 
               {/* Zona Bahaya: Reset Bersih */}
@@ -1446,21 +1468,23 @@ export default function OtherViews({
                 onClick={() => setEditingLecturer(c)}
                 className="p-3.5 sm:p-4 rounded-3xl bg-white border border-m3-outline-variant hover:border-m3-primary/50 shadow-xs hover:shadow-sm transition-all flex gap-3.5 cursor-pointer group relative overflow-hidden"
               >
-                {/* KIRI: FOTO DOSEN PERSEGI PANJANG / POTRET SESUAI SKETSA */}
-                <div className="w-20 sm:w-24 h-28 sm:h-32 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 flex-shrink-0 relative">
-                  {c.lecturerPhoto ? (
-                    <img
-                      src={c.lecturerPhoto}
-                      alt={c.lecturerName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-m3-secondary bg-m3-surface-container">
-                      <User className="w-8 h-8 opacity-50" />
-                      <span className="text-[10px] font-bold mt-1">Dosen</span>
-                    </div>
-                  )}
-                </div>
+                {/* KIRI: FOTO DOSEN PERSEGI PANJANG / POTRET (BISA DISEMBUNYIKAN VIA SETTING) */}
+                {!hideLecturerPhotos && (
+                  <div className="w-20 sm:w-24 h-28 sm:h-32 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200/80 flex-shrink-0 relative">
+                    {c.lecturerPhoto ? (
+                      <img
+                        src={c.lecturerPhoto}
+                        alt={c.lecturerName}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-m3-secondary bg-m3-surface-container">
+                        <User className="w-8 h-8 opacity-50" />
+                        <span className="text-[10px] font-bold mt-1">Dosen</span>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* KANAN: HIERARKI NAMA MATKUL DULU -> DOSEN KECIL -> WAKTU & LOKASI -> LINK WA & LMS */}
                 <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
@@ -1477,12 +1501,12 @@ export default function OtherViews({
 
                     {/* Jam Kelas & Lokasi Berdampingan Sesuai Permintaan */}
                     <div className="flex items-center gap-1.5 text-[10px] text-m3-secondary mt-2 flex-wrap">
-                      <div className="flex items-center gap-1 bg-m3-surface-container px-2 py-0.5 rounded-full font-medium">
+                      <div className="flex items-center gap-1 bg-m3-surface-container px-2.5 py-0.5 rounded-full font-medium">
                         <Clock className="w-3 h-3 text-m3-primary flex-shrink-0" />
-                        <span>{c.dayTime.split(" ")[0]} {c.dayTime.split(" ")[1] || ""}</span>
+                        <span>{c.dayTime}</span>
                       </div>
                       <span className="text-slate-300">•</span>
-                      <span className="truncate max-w-[110px]">{c.room}</span>
+                      <span className="truncate max-w-[140px] font-medium text-slate-700">{c.room}</span>
                     </div>
                   </div>
 

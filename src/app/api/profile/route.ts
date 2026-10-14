@@ -25,13 +25,15 @@ export async function GET(req: Request) {
         maxSKS: 24,
         photoUrl: "",
         noAiMode: false,
+        semesterStartDate: "2026-09-07",
+        aiTokenUsage: 0,
       });
     }
 
     return NextResponse.json({
       userId: profile.user_id,
       name: profile.name,
-      nim: profile.nim,
+      nim: profile.nim === "23/------/TK/00000" ? "" : profile.nim,
       email: profile.email,
       major: profile.major,
       faculty: profile.faculty,
@@ -42,6 +44,8 @@ export async function GET(req: Request) {
       maxSKS: profile.max_sks,
       photoUrl: profile.photo_url || "",
       noAiMode: !!profile.no_ai_mode,
+      semesterStartDate: profile.semester_start_date || "2026-09-07",
+      aiTokenUsage: profile.ai_token_usage || 0,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -65,15 +69,19 @@ export async function PUT(req: Request) {
       maxSKS = 24,
       photoUrl = "",
       noAiMode = false,
+      semesterStartDate = "2026-09-07",
+      aiTokenUsage = 0,
     } = body;
 
+    const cleanNim = nim === "23/------/TK/00000" ? "" : nim;
+
     db.prepare(`
-      INSERT OR REPLACE INTO profile (user_id, name, nim, email, major, faculty, university, semester, academic_advisor, target_gpa, max_sks, photo_url, no_ai_mode)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO profile (user_id, name, nim, email, major, faculty, university, semester, academic_advisor, target_gpa, max_sks, photo_url, no_ai_mode, semester_start_date, ai_token_usage)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       name,
-      nim,
+      cleanNim,
       email,
       major,
       faculty,
@@ -83,14 +91,16 @@ export async function PUT(req: Request) {
       targetGPA,
       maxSKS,
       photoUrl,
-      noAiMode ? 1 : 0
+      noAiMode ? 1 : 0,
+      semesterStartDate,
+      aiTokenUsage
     );
 
     // Also update users table name and avatar
     db.prepare(`
       INSERT OR REPLACE INTO users (id, name, nim, email, avatar)
       VALUES (?, ?, ?, ?, ?)
-    `).run(userId, name, nim, email, photoUrl);
+    `).run(userId, name, cleanNim, email, photoUrl);
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

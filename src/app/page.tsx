@@ -286,6 +286,33 @@ export default function HomeDashboard() {
       filePath: info.filePath,
       topic: info.topic,
     });
+
+    // Persist document metadata into SQLite database
+    try {
+      fetch("/api/documents", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: `doc-${Date.now()}`,
+          course: targetCourse,
+          fileName: info.fileName,
+          filePath: info.filePath,
+          fileType: info.fileName.toLowerCase().endsWith(".pptx")
+            ? "pptx"
+            : info.fileName.toLowerCase().endsWith(".docx")
+            ? "docx"
+            : info.fileName.toLowerCase().match(/\.(jpe?g|png)$/)
+            ? "jpg"
+            : "pdf",
+          docType: info.docType || "Dokumen Perkuliahan",
+          sessionNo: info.sessionNo,
+          topic: info.topic,
+        }),
+      }).catch((err) => console.error("Gagal simpan dokumen ke DB:", err));
+    } catch (e) {
+      console.error(e);
+    }
+
     setActiveTab("rps");
     setBannerNotice(
       `Dokumen "${info.fileName}" berhasil diunggah ke mata kuliah ${targetCourse}.`
@@ -295,11 +322,15 @@ export default function HomeDashboard() {
 
   const firstName = profile.name.split(" ")[0] || "Mahasiswa";
 
-  // Academic week based on semester start (Sep 7, 2026) and reference date (Oct 1, 2026)
-  const semesterStart = new Date(2026, 8, 7);
-  const currentWeek = Math.floor(
-    (new Date(2026, 9, 1).getTime() - semesterStart.getTime()) / (7 * 86400000)
-  ) + 1;
+  // Academic week based on user configured semester start date and real system date
+  const semesterStart = profile.semesterStartDate
+    ? new Date(profile.semesterStartDate)
+    : new Date("2026-09-07");
+  const today = new Date();
+  const currentWeek = Math.max(
+    1,
+    Math.floor((today.getTime() - semesterStart.getTime()) / (7 * 86400000)) + 1
+  );
 
   return (
     <div className="min-h-screen bg-[#F1F5F9] text-m3-on-surface flex flex-col md:flex-row antialiased p-2.5 sm:p-3.5 gap-3.5">
@@ -404,6 +435,7 @@ export default function HomeDashboard() {
                   onOpenRPS={() => setActiveTab("rps")}
                   schedules={schedules}
                   onOpenCalendar={() => setActiveTab("kalender")}
+                  onUpdateAttendance={(id, status) => handleUpdateSchedule(id, { attendanceStatus: status })}
                 />
               </div>
 
@@ -427,6 +459,7 @@ export default function HomeDashboard() {
                   onDeleteSchedule={handleDeleteSchedule}
                   onAddSchedule={handleAddSchedule}
                   noAiMode={!!profile.noAiMode}
+                  semesterStartDate={profile.semesterStartDate}
                 />
               </div>
 

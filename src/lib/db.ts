@@ -157,6 +157,19 @@ db.exec(`
     status TEXT DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- 10. Dokumen & Berkas RPS Terunggah
+  CREATE TABLE IF NOT EXISTS uploaded_documents (
+    id TEXT PRIMARY KEY,
+    course_name TEXT NOT NULL,
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_type TEXT NOT NULL,
+    doc_type TEXT,
+    session_no INTEGER,
+    topic TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // Migration safety: Ensure new columns exist in existing tables
@@ -168,6 +181,15 @@ try {
   if (!profCols.some((c) => c.name === "no_ai_mode")) {
     db.exec("ALTER TABLE profile ADD COLUMN no_ai_mode INTEGER DEFAULT 0;");
   }
+  if (!profCols.some((c) => c.name === "semester_start_date")) {
+    db.exec("ALTER TABLE profile ADD COLUMN semester_start_date TEXT DEFAULT '2026-09-07';");
+  }
+  if (!profCols.some((c) => c.name === "ai_token_usage")) {
+    db.exec("ALTER TABLE profile ADD COLUMN ai_token_usage INTEGER DEFAULT 0;");
+  }
+  // Bersihkan nilai dummy NIM lama jika ada
+  db.exec("UPDATE profile SET nim = '' WHERE nim = '23/------/TK/00000';");
+  db.exec("UPDATE users SET nim = '' WHERE nim = '23/------/TK/00000';");
 } catch (e) {
   console.log("Migration check profile:", e);
 }
@@ -181,6 +203,15 @@ try {
   console.log("Migration check tasks:", e);
 }
 
+try {
+  const schedCols: any[] = db.prepare("PRAGMA table_info(schedule)").all();
+  if (!schedCols.some((c) => c.name === "class_type")) {
+    db.exec("ALTER TABLE schedule ADD COLUMN class_type TEXT DEFAULT 'reguler';");
+  }
+} catch (e) {
+  console.log("Migration check schedule:", e);
+}
+
 // Clean initialization: Single personal student profile, zero mock tasks/schedules
 export function initializeCleanDatabase() {
   const init = db.transaction(() => {
@@ -189,18 +220,18 @@ export function initializeCleanDatabase() {
       db.prepare(`
         INSERT INTO users (id, name, nim, email, avatar)
         VALUES (?, ?, ?, ?, ?)
-      `).run(DEFAULT_USER_ID, "Mahasiswa", "23/------/TK/00000", "mahasiswa@mail.ugm.ac.id", "");
+      `).run(DEFAULT_USER_ID, "Mahasiswa", "", "mahasiswa@mail.ugm.ac.id", "");
     }
 
     const existingProfile = db.prepare("SELECT user_id FROM profile WHERE user_id = ?").get(DEFAULT_USER_ID);
     if (!existingProfile) {
       db.prepare(`
-        INSERT INTO profile (user_id, name, nim, email, major, faculty, university, semester, academic_advisor, target_gpa, max_sks, photo_url)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO profile (user_id, name, nim, email, major, faculty, university, semester, academic_advisor, target_gpa, max_sks, photo_url, semester_start_date, ai_token_usage)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         DEFAULT_USER_ID,
         "Mahasiswa",
-        "23/------/TK/00000",
+        "",
         "mahasiswa@mail.ugm.ac.id",
         "Teknik Informatika",
         "Fakultas Teknik",
@@ -209,7 +240,9 @@ export function initializeCleanDatabase() {
         "",
         "3.80",
         24,
-        ""
+        "",
+        "2026-09-07",
+        0
       );
     }
   });

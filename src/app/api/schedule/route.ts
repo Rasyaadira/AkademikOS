@@ -22,6 +22,7 @@ export async function GET(req: Request) {
       day: s.day,
       status: s.status || "upcoming",
       attendanceStatus: s.attendance_status || "pending",
+      classType: s.class_type || "reguler",
     }));
     return NextResponse.json(formatted);
   } catch (error: any) {

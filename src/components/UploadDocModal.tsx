@@ -54,6 +54,43 @@ export default function UploadDocModal({
   const [sessionNo, setSessionNo] = useState<number | "all">("all");
   const [topic, setTopic] = useState("");
   const [showEmptyCourseConfirm, setShowEmptyCourseConfirm] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+
+  const handleAutoAnalyzeAI = () => {
+    if (!selectedFile) return;
+    setIsAnalyzing(true);
+    setTimeout(() => {
+      const lower = selectedFile.name.toLowerCase();
+      // Match course
+      const matched = courses.find((c) => lower.includes(c.toLowerCase()));
+      if (matched) {
+        setSelectedCourse(matched);
+        setIsCustomCourse(false);
+      }
+      // Match docType
+      if (lower.includes("rps") || lower.includes("silabus") || lower.includes("kurikulum")) {
+        setDocType("rps");
+        setSessionNo("all");
+      } else if (lower.includes("slide") || lower.includes("ppt") || lower.includes("materi")) {
+        setDocType("slide");
+        setSessionNo(1);
+      } else if (lower.includes("tugas") || lower.includes("assignment") || lower.includes("proyek")) {
+        setDocType("tugas");
+        setSessionNo(1);
+      } else if (lower.includes("praktikum") || lower.includes("lab") || lower.includes("modul")) {
+        setDocType("praktikum");
+        setSessionNo(1);
+      }
+      // Topic
+      const cleanTopic = selectedFile.name
+        .replace(/\.[^/.]+$/, "")
+        .replace(/^[0-9._\- ]+/, "")
+        .replace(/[_-]/g, " ");
+      setTopic(cleanTopic);
+      setIsAnalyzing(false);
+      setShowEmptyCourseConfirm(false);
+    }, 1200);
+  };
 
   useEffect(() => {
     if (initialFile) {
@@ -258,14 +295,44 @@ export default function UploadDocModal({
 
             {/* AI Assistant Question Box */}
             {!noAiMode && (
-              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
-                <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
-                  <Sparkles className="w-4 h-4 text-indigo-600" />
-                  <span>Rekomendasi Penempatan Dokumen (AI Routing)</span>
+              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
+                    <Sparkles className="w-4 h-4 text-indigo-600" />
+                    <span>Rekomendasi Penempatan Dokumen (AI Routing)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAutoAnalyzeAI}
+                    disabled={isAnalyzing}
+                    className="px-3.5 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-60 cursor-pointer"
+                    title="Jalankan analisis AI otomatis untuk mendeteksi mata kuliah dan pertemuan"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <span>Menganalisis berkas...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Analisis & Auto-Isi AI</span>
+                      </>
+                    )}
+                  </button>
                 </div>
-                <p className="text-[11px] text-indigo-950/80 leading-relaxed">
-                  Dokumen ini terdeteksi sebagai bahan perkuliahan. Silakan konfirmasi mata kuliah tujuan dan kategorinya agar berkas langsung terorganisir ke folder yang tepat.
-                </p>
+                {isAnalyzing ? (
+                  <div className="p-2.5 rounded-xl bg-white/90 border border-indigo-200 text-xs text-indigo-900 flex items-center gap-2.5 animate-pulse">
+                    <div className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
+                    <span className="font-medium">
+                      AI sedang memindai isi dokumen dan mencocokkan dengan daftar mata kuliah Anda...
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-indigo-950/80 leading-relaxed">
+                    Klik <strong>Analisis & Auto-Isi AI</strong> untuk mengisi kategori dan mata kuliah secara otomatis, atau lengkapi penempatan folder secara manual di bawah.
+                  </p>
+                )}
               </div>
             )}
 

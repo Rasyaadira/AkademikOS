@@ -1,6 +1,8 @@
 // Google Gemini API Integration for AkademikOS
 // Models: gemini-flash-latest, gemini-flash-lite-latest, gemini-3.8-flash
 
+import db, { DEFAULT_USER_ID } from "./db";
+
 const DEFAULT_GEMINI_KEY =
   process.env.GEMINI_API_KEY || "AQ.Ab8RN6KCVOZPSaaZcgHxIli8tOGdN8bR9tkJSLjlNNdg2gy0pQ";
 
@@ -79,6 +81,17 @@ export async function callGemini(
       const data = await res.json();
       const candidate = data.candidates?.[0];
       const text = candidate?.content?.parts?.[0]?.text;
+
+      // Catat penggunaan token ke database
+      if (data.usageMetadata?.totalTokenCount) {
+        try {
+          db.prepare(
+            "UPDATE profile SET ai_token_usage = COALESCE(ai_token_usage, 0) + ? WHERE user_id = ?"
+          ).run(data.usageMetadata.totalTokenCount, DEFAULT_USER_ID);
+        } catch (e) {
+          console.warn("Gagal mencatat pemakaian token AI:", e);
+        }
+      }
 
       if (!text) {
         throw new Error("Tidak ada respon teks dari model Gemini");

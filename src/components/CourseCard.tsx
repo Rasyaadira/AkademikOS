@@ -8,18 +8,87 @@ interface CourseCardProps {
   onOpenRPS: () => void;
   schedules?: ScheduleItem[];
   onOpenCalendar?: () => void;
+  onUpdateAttendance?: (scheduleId: string, status: "hadir" | "izin" | "sakit" | "alpa") => void;
 }
 
-export default function CourseCard({ onOpenRPS, schedules = [], onOpenCalendar }: CourseCardProps) {
-  const [attendance, setAttendance] = useState<"hadir" | "izin" | "sakit" | "alpa">("hadir");
+export default function CourseCard({
+  onOpenRPS,
+  schedules = [],
+  onOpenCalendar,
+  onUpdateAttendance,
+}: CourseCardProps) {
+  // Hitung mata kuliah terdekat berikutnya berdasarkan waktu sekarang
+  const dayMap: Record<string, number> = {
+    minggu: 0,
+    senin: 1,
+    selasa: 2,
+    rabu: 3,
+    kamis: 4,
+    jumat: 5,
+    sabtu: 6,
+  };
 
-  // Determine today's day name in Indonesian
-  const dayNames = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
-  const todayName = dayNames[new Date().getDay()];
+  const now = new Date();
+  const currentDay = now.getDay();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
-  // Find active course for today or fallback to first available schedule
-  const todaySchedules = schedules.filter((s) => s.day.toLowerCase() === todayName);
-  const activeCourse = todaySchedules[0] || schedules[0] || null;
+  // Cari jadwal terdekat berikutnya
+  const nextCourseInfo = React.useMemo(() => {
+    if (!schedules || schedules.length === 0) return null;
+
+    const analyzed = schedules.map((s) => {
+      const targetDay = dayMap[s.day.toLowerCase()] ?? 1;
+      const [sh, sm] = (s.startTime || "08.00").replace(":", ".").split(".").map(Number);
+      const startMinutes = (sh || s.startHour || 8) * 60 + (sm || 0);
+
+      const [eh, em] = (s.endTime || "10.00").replace(":", ".").split(".").map(Number);
+      const endMinutes = (eh || s.startHour + s.durationHours || 10) * 60 + (em || 0);
+
+      let dayDiff = (targetDay - currentDay + 7) % 7;
+
+      // Jika hari ini tapi kelasnya sudah selesai, maka kelas berikutnya ada di minggu depan
+      if (dayDiff === 0 && endMinutes < currentMinutes) {
+        dayDiff = 7;
+      }
+
+      const isHappeningNow =
+        dayDiff === 0 && currentMinutes >= startMinutes && currentMinutes <= endMinutes;
+
+      // Hitung selisih menit dari sekarang
+      const minutesUntil = isHappeningNow
+        ? -1
+        : dayDiff * 24 * 60 + (startMinutes - currentMinutes);
+
+      return {
+        schedule: s,
+        dayDiff,
+        isHappeningNow,
+        minutesUntil,
+      };
+    });
+
+    analyzed.sort((a, b) => a.minutesUntil - b.minutesUntil);
+    return analyzed[0] || null;
+  }, [schedules, currentDay, currentMinutes]);
+
+  const activeCourse = nextCourseInfo?.schedule || schedules[0] || null;
+
+  const [attendance, setAttendance] = useState<"hadir" | "izin" | "sakit" | "alpa">(
+    (activeCourse?.attendanceStatus as any) || "hadir"
+  );
+
+  React.useEffect(() => {
+    if (activeCourse?.attendanceStatus) {
+      setAttendance((activeCourse.attendanceStatus as any) || "hadir");
+    }
+  }, [activeCourse?.id, activeCourse?.attendanceStatus]);
+
+  const handleAttendanceSelect = (val: "hadir" | "izin" | "sakit" | "alpa") => {
+    setAttendance(val);
+    if (activeCourse && onUpdateAttendance) {
+      onUpdateAttendance(activeCourse.id, val);
+    }
+  };
 
   if (!activeCourse) {
     return (
@@ -69,10 +138,24 @@ export default function CourseCard({ onOpenRPS, schedules = [], onOpenCalendar }
       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
         {/* Left Course Details */}
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-m3-primary/10 text-m3-primary">
-              {activeCourse.day ? activeCourse.day.charAt(0).toUpperCase() + activeCourse.day.slice(1) : "Hari Ini"}
-            </span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {nextCourseInfo?.isHappeningNow ? (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse">
+                Sedang Berlangsung Sekarang
+              </span>
+            ) : nextCourseInfo?.dayDiff === 0 ? (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-800 border border-indigo-200">
+                Kuliah Hari Ini ({Math.floor(nextCourseInfo.minutesUntil / 60)}j {nextCourseInfo.minutesUntil % 60}m lagi)
+              </span>
+            ) : nextCourseInfo?.dayDiff === 1 ? (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                Kuliah Terdekat: Besok ({activeCourse.day?.toUpperCase()})
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-m3-primary/10 text-m3-primary">
+                Kuliah Terdekat: {activeCourse.day ? activeCourse.day.charAt(0).toUpperCase() + activeCourse.day.slice(1) : "Senin"}
+              </span>
+            )}
             {activeCourse.code && (
               <span className="text-[10px] font-mono text-m3-secondary">
                 {activeCourse.code}
@@ -131,7 +214,7 @@ export default function CourseCard({ onOpenRPS, schedules = [], onOpenCalendar }
           <div className="relative">
             <select
               value={attendance}
-              onChange={(e) => setAttendance(e.target.value as any)}
+              onChange={(e) => handleAttendanceSelect(e.target.value as any)}
               className={`appearance-none pl-3.5 pr-8 py-1.5 rounded-full text-xs font-semibold border transition-colors cursor-pointer focus:outline-none ${
                 attendance === "hadir"
                   ? "bg-m3-tertiary text-m3-on-tertiary border-emerald-300"

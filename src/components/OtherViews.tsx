@@ -55,6 +55,8 @@ export interface StudentProfile {
   maxSKS: number;
   photoUrl?: string;
   noAiMode?: boolean;
+  semesterStartDate?: string;
+  aiTokenUsage?: number;
 }
 
 export interface CourseLecturerItem {
@@ -174,6 +176,65 @@ export default function OtherViews({
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [rpsSearchQuery, setRpsSearchQuery] = useState("");
 
+  // Load persistent documents from SQLite on mount
+  React.useEffect(() => {
+    fetch("/api/documents")
+      .then((res) => res.json())
+      .then((docs) => {
+        if (Array.isArray(docs) && docs.length > 0) {
+          const folderMap = new Map<string, CourseFolder>();
+          docs.forEach((doc: any) => {
+            const courseName = doc.course || "Mata Kuliah Umum";
+            const lower = (doc.fileName || "").toLowerCase();
+            const ext = lower.endsWith(".pptx")
+              ? "pptx"
+              : lower.endsWith(".docx")
+              ? "docx"
+              : lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+              ? "jpg"
+              : lower.endsWith(".png")
+              ? "png"
+              : "pdf";
+
+            const fileItem: FileItem = {
+              id: doc.id,
+              name: doc.fileName,
+              type: ext,
+              updated: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString("id-ID") : "Tersimpan",
+              filePath: doc.filePath,
+              sessionNo: doc.sessionNo,
+              topic: doc.topic,
+              description: `Dokumen ${doc.docType || "Perkuliahan"} untuk ${courseName}.`,
+              sessions: [
+                {
+                  no: doc.sessionNo || 1,
+                  topic: doc.topic || doc.fileName,
+                  subtopics: `Kategori: ${doc.docType || "Perkuliahan"}. Tersimpan di database.`,
+                },
+              ],
+            };
+
+            if (!folderMap.has(courseName)) {
+              folderMap.set(courseName, {
+                id: `folder-${courseName.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+                courseName,
+                lecturer: "Dosen Pengampu",
+                files: [fileItem],
+              });
+            } else {
+              folderMap.get(courseName)!.files.push(fileItem);
+            }
+          });
+
+          const loadedFolders = Array.from(folderMap.values());
+          setRpsFolders(loadedFolders);
+          setOpenRpsFolderId((prev) => prev || loadedFolders[0]?.id || "");
+          setSelectedFileId((prev) => prev || loadedFolders[0]?.files[0]?.id || "");
+        }
+      })
+      .catch((err) => console.error("Error loading documents:", err));
+  }, []);
+
   // Sync newly uploaded document directly into matching course folder in RPS
   React.useEffect(() => {
     if (newUploadedDoc) {
@@ -276,6 +337,27 @@ export default function OtherViews({
     attendanceStatus: "aman",
   });
 
+  // Helper to compute attendance health based on recorded schedule attendance
+  const computeAttendanceHealth = (courseName: string): "aman" | "hmm" | "gawat" | "bahaya" => {
+    const norm = courseName.trim().toLowerCase();
+    const matched = schedules.filter((s) => s.course.trim().toLowerCase() === norm);
+    let izinOrSakit = 0;
+    let alpa = 0;
+    matched.forEach((s) => {
+      const st = (s.attendanceStatus || "").toLowerCase();
+      if (st === "izin" || st === "sakit") {
+        izinOrSakit++;
+      } else if (st === "alpa") {
+        alpa++;
+      }
+    });
+
+    if (alpa >= 2 || izinOrSakit + alpa >= 3) return "bahaya";
+    if (alpa === 1 || izinOrSakit >= 2) return "gawat";
+    if (izinOrSakit === 1) return "hmm";
+    return "aman";
+  };
+
   // Synchronize schedules from Calendar into Matkul & Dosen tab dynamically
   React.useEffect(() => {
     if (schedules && schedules.length > 0) {
@@ -291,12 +373,15 @@ export default function OtherViews({
             const existing = customMap.get(key);
             const dayStr = s.day ? s.day.charAt(0).toUpperCase() + s.day.slice(1) : "Senin";
             const timeStr = `${dayStr}, ${s.startTime || "08.00"} - ${s.endTime || "10.00"} WIB`;
+            const autoHealth = computeAttendanceHealth(s.course);
+
             if (existing) {
               merged.push({
                 ...existing,
                 dayTime: timeStr,
                 room: s.room && s.room !== "-" ? s.room : existing.room || "-",
                 lecturerName: existing.lecturerName && existing.lecturerName !== "-" ? existing.lecturerName : (s.lecturer || "-"),
+                attendanceStatus: autoHealth !== "aman" ? autoHealth : (existing.attendanceStatus || "aman"),
               });
             } else {
               merged.push({
@@ -306,7 +391,7 @@ export default function OtherViews({
                 dayTime: timeStr,
                 room: s.room || "-",
                 sks: 3,
-                attendanceStatus: "aman",
+                attendanceStatus: autoHealth,
               });
             }
           }
@@ -315,7 +400,11 @@ export default function OtherViews({
         // Keep any manually added lecturers not in schedules
         prev.forEach((p) => {
           if (!seenCourses.has(p.courseName.toLowerCase())) {
-            merged.push(p);
+            const autoHealth = computeAttendanceHealth(p.courseName);
+            merged.push({
+              ...p,
+              attendanceStatus: autoHealth !== "aman" ? autoHealth : p.attendanceStatus,
+            });
           }
         });
 
@@ -503,7 +592,7 @@ export default function OtherViews({
   const currentFolder = rpsFolders.find((f) => f.files.some((fl) => fl.id === currentDoc?.id)) || rpsFolders[0] || null;
 
   return (
-    <section className="flex-1 bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-7 space-y-5 shadow-xs flex flex-col">
+    <section className="flex-1 space-y-5 flex flex-col">
       {/* Tab Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-m3-outline-variant pb-3 gap-2 flex-shrink-0">
         <div>
@@ -537,6 +626,7 @@ export default function OtherViews({
               onAddSchedule={onAddSchedule}
               isExpanded={true}
               noAiMode={!!profile.noAiMode}
+              semesterStartDate={profile.semesterStartDate}
             />
           </div>
 
@@ -1083,6 +1173,32 @@ export default function OtherViews({
                       <Download className="w-3.5 h-3.5" />
                       <span>Unduh</span>
                     </a>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (confirm(`Hapus berkas "${currentDoc.name}"?`)) {
+                          try {
+                            await fetch(`/api/documents?id=${currentDoc.id}`, { method: "DELETE" });
+                          } catch (err) {
+                            console.error("Gagal menghapus berkas:", err);
+                          }
+                          setRpsFolders((prev) =>
+                            prev
+                              .map((f) => ({
+                                ...f,
+                                files: f.files.filter((fl) => fl.id !== currentDoc.id),
+                              }))
+                              .filter((f) => f.files.length > 0)
+                          );
+                          setSelectedFileId("");
+                        }
+                      }}
+                      className="min-h-[44px] px-3.5 py-1.5 rounded-full bg-rose-50 hover:bg-rose-100 text-xs font-semibold text-rose-700 border border-rose-200 flex items-center gap-1.5 transition-colors"
+                      title="Hapus berkas ini"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Hapus</span>
+                    </button>
                   </div>
                 </div>
 
@@ -1269,7 +1385,6 @@ export default function OtherViews({
                       type="text"
                       value={formData.nim}
                       onChange={(e) => handleInputChange("nim", e.target.value)}
-                      required
                       placeholder="Contoh: 22/498231/TK/54120"
                       className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary font-mono"
                     />
@@ -1355,6 +1470,22 @@ export default function OtherViews({
                     />
                   </div>
                 </div>
+
+                {/* Tanggal Mulai Perkuliahan (Minggu Ke-1) */}
+                <div className="space-y-1 pt-1">
+                  <label className="text-xs font-semibold text-m3-on-surface">
+                    Tanggal Mulai Perkuliahan (Minggu Ke-1)
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.semesterStartDate || "2026-09-07"}
+                    onChange={(e) => handleInputChange("semesterStartDate", e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                  />
+                  <p className="text-[11px] text-m3-secondary">
+                    Digunakan sebagai acuan perhitungan minggu ke-X perkuliahan pada header dashboard dan kalender.
+                  </p>
+                </div>
               </div>
             </div>
 
@@ -1365,6 +1496,25 @@ export default function OtherViews({
               <div className="flex items-center gap-2 pb-1">
                 <Globe className="w-4 h-4 text-m3-primary" />
                 <h3 className="text-sm font-bold text-m3-on-surface">Pengaturan Data & Preferensi Sistem</h3>
+              </div>
+
+              {/* Statistik Penggunaan AI */}
+              <div className="p-4 rounded-2xl bg-m3-surface-container/40 border border-m3-outline-variant/60 flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-m3-primary" />
+                    <p className="text-xs font-bold text-m3-on-surface">Total Penggunaan Token AI</p>
+                  </div>
+                  <p className="text-[11px] text-m3-secondary mt-0.5">
+                    Akumulasi penggunaan token AI untuk analisis berkas dan impor jadwal perkuliahan.
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-sm font-bold font-mono text-m3-primary">
+                    {(formData.aiTokenUsage || 0).toLocaleString("id-ID")}
+                  </span>
+                  <span className="text-[10px] text-m3-secondary block">tokens</span>
+                </div>
               </div>
 
               <div className="p-4 rounded-2xl bg-m3-surface-container/40 border border-m3-outline-variant/60 flex items-center justify-between">

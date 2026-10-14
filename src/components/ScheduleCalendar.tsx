@@ -39,6 +39,7 @@ export interface ScheduleItem {
   day: string;
   status: "completed" | "active" | "upcoming";
   attendanceStatus?: string;
+  classType?: "reguler" | "pindahan";
   color?: string;
   time?: string;
 }
@@ -54,6 +55,7 @@ interface ScheduleCalendarProps {
   onAddSchedule?: (newSched: ScheduleItem) => void;
   isExpanded?: boolean;
   noAiMode?: boolean;
+  semesterStartDate?: string;
 }
 
 // Color palettes for distinct courses in calendar views
@@ -94,9 +96,15 @@ export default function ScheduleCalendar({
   onAddSchedule,
   isExpanded = false,
   noAiMode = false,
+  semesterStartDate,
 }: ScheduleCalendarProps) {
   const [viewMode, setViewMode] = useState<CalendarViewMode>("1hari");
-  const [internalDay, setInternalDay] = useState("kamis");
+
+  // Sysdate initialization (mengikuti hari dan tanggal sistem saat ini)
+  const weekdayToKey = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
+  const currentSysDay = weekdayToKey[new Date().getDay()] || "senin";
+
+  const [internalDay, setInternalDay] = useState(currentSysDay);
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [dragOverCell, setDragOverCell] = useState<{ day: string; hour: number } | null>(null);
   const [editingItem, setEditingItem] = useState<ScheduleItem | null>(null);
@@ -112,10 +120,12 @@ export default function ScheduleCalendar({
   const [isImportScheduleOpen, setIsImportScheduleOpen] = useState(false);
   const [newCourse, setNewCourse] = useState("");
   const [newRoom, setNewRoom] = useState("");
-  const [newDay, setNewDay] = useState("kamis");
+  const [newDay, setNewDay] = useState(currentSysDay);
   const [newLecturer, setNewLecturer] = useState("");
-  const [newStartTime, setNewStartTime] = useState("09.00");
-  const [newEndTime, setNewEndTime] = useState("11.30");
+  const [newStartTime, setNewStartTime] = useState("08.00");
+  const [newEndTime, setNewEndTime] = useState("10.00");
+  const [newClassType, setNewClassType] = useState<"reguler" | "pindahan">("reguler");
+  const [showAdvancedAdd, setShowAdvancedAdd] = useState(false);
 
   const [isExtractingPhoto, setIsExtractingPhoto] = useState(false);
   const [extractedCandidates, setExtractedCandidates] = useState<any[]>([]);
@@ -164,9 +174,9 @@ export default function ScheduleCalendar({
     }
   };
 
-  // Base anchor today: 1 Oktober 2026 (Kamis)
-  const BASE_TODAY = new Date(2026, 9, 1);
-  const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 9, 1));
+  // Base anchor today: Tanggal sistem saat ini (sysdate)
+  const BASE_TODAY = new Date();
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
 
   const monthNames = [
     "Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -178,7 +188,6 @@ export default function ScheduleCalendar({
   ];
   const dayKeys = ["senin", "selasa", "rabu", "kamis", "jumat", "sabtu", "minggu"];
   const dayLabels = ["Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu"];
-  const weekdayToKey = ["minggu", "senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
 
   // Monday of the active week
   const getMondayOfWeek = (d: Date) => {
@@ -311,7 +320,9 @@ export default function ScheduleCalendar({
     currentDate.getDate() === BASE_TODAY.getDate();
 
   // Academic week estimation
-  const semesterStart = new Date(2026, 8, 7);
+  const semesterStart = semesterStartDate
+    ? new Date(semesterStartDate)
+    : new Date(2026, 8, 7);
   const diffWeeks = Math.floor((mondayDate.getTime() - semesterStart.getTime()) / (7 * 86400000)) + 1;
 
   // Drag and drop handlers
@@ -379,6 +390,7 @@ export default function ScheduleCalendar({
       durationHours: 2,
       status: "upcoming",
       attendanceStatus: "pending",
+      classType: newClassType,
     };
     if (onAddSchedule) {
       onAddSchedule(newSched);
@@ -694,10 +706,15 @@ export default function ScheduleCalendar({
                         <div className="flex items-center gap-2 min-w-0">
                           <GripVertical className="w-3.5 h-3.5 text-m3-secondary flex-shrink-0 opacity-60 group-hover:opacity-100" />
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs font-bold text-m3-on-surface truncate">
                                 {item.course}
                               </span>
+                              {item.classType === "pindahan" && (
+                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 flex-shrink-0">
+                                  Pindahan Dosen
+                                </span>
+                              )}
                               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-m3-surface-container-low text-m3-secondary">
                                 {item.startTime} - {item.endTime} WIB
                               </span>
@@ -884,7 +901,14 @@ export default function ScheduleCalendar({
                               className={`w-full p-1 rounded-lg text-[9px] font-bold shadow-xs cursor-pointer active:cursor-grabbing hover:brightness-95 flex flex-col justify-between border transition-all ${badgeColor}`}
                               title={`${classInCell.course} (${classInCell.startTime}-${classInCell.endTime}) - Klik untuk edit`}
                             >
-                              <span className="truncate leading-tight font-extrabold">{classInCell.course}</span>
+                              <div className="flex items-center justify-between gap-0.5">
+                                <span className="truncate leading-tight font-extrabold">{classInCell.course}</span>
+                                {classInCell.classType === "pindahan" && (
+                                  <span className="text-[7px] px-1 py-0.2 rounded bg-amber-600 text-white font-bold flex-shrink-0">
+                                    Pindahan
+                                  </span>
+                                )}
+                              </div>
                               <div className="flex items-center justify-between text-[8px] opacity-80 pt-0.5">
                                 <span>{classInCell.room ? classInCell.room.split("-")[0] : "-"}</span>
                                 <span>{classInCell.startTime}</span>
@@ -1017,10 +1041,19 @@ export default function ScheduleCalendar({
                                   e.stopPropagation();
                                   handleCardClick(e, cl);
                                 }}
-                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold truncate border transition-colors ${badgeColor}`}
+                                className={`px-1.5 py-0.5 rounded text-[9px] font-bold truncate border transition-colors flex items-center justify-between gap-1 ${
+                                  cl.classType === "pindahan"
+                                    ? "bg-amber-100 text-amber-900 border-amber-300"
+                                    : badgeColor
+                                }`}
                                 title={`${cl.course} (${cl.startTime} - ${cl.endTime} WIB) - Klik untuk edit`}
                               >
-                                {cl.course}
+                                <span className="truncate">{cl.course}</span>
+                                {cl.classType === "pindahan" && (
+                                  <span className="text-[7px] px-1 rounded bg-amber-600 text-white font-semibold flex-shrink-0">
+                                    Pindahan
+                                  </span>
+                                )}
                               </div>
                             );
                           })}
@@ -1065,7 +1098,10 @@ export default function ScheduleCalendar({
           <div className="bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl w-full max-w-md p-6 space-y-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-2 border-b border-m3-outline-variant">
               <div>
-                <h3 className="text-base font-bold text-m3-on-surface">Edit Jadwal Perkuliahan</h3>
+                <h3 className="text-base font-bold text-m3-on-surface">Detail & Edit Jadwal</h3>
+                <p className="text-xs text-indigo-700 font-bold mt-0.5">
+                  {diffWeeks >= 1 ? `Minggu ke-${diffWeeks} Perkuliahan` : "Periode Pra-Semester"}
+                </p>
               </div>
               <button
                 type="button"
@@ -1078,6 +1114,35 @@ export default function ScheduleCalendar({
             </div>
 
             <form onSubmit={handleSaveEdit} className="space-y-3.5">
+              {/* Tipe Jadwal */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-m3-on-surface">Tipe Jadwal</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem({ ...editingItem, classType: "reguler" })}
+                    className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      editingItem.classType !== "pindahan"
+                        ? "bg-m3-primary text-m3-on-primary border-m3-primary"
+                        : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
+                    }`}
+                  >
+                    Jadwal Reguler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem({ ...editingItem, classType: "pindahan" })}
+                    className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+                      editingItem.classType === "pindahan"
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
+                    }`}
+                  >
+                    Pindahan Dosen
+                  </button>
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-m3-on-surface">Nama Mata Kuliah</label>
                 <input
@@ -1283,40 +1348,69 @@ export default function ScheduleCalendar({
             )}
 
             <form onSubmit={handleSaveNewSchedule} className="space-y-3.5 text-xs">
+              {/* 1. Nama Mata Kuliah (Utama & Cepat) */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-m3-on-surface flex items-center gap-1">
-                  <CalendarIcon className="w-3.5 h-3.5 text-m3-secondary" />
+                <label className="text-xs font-bold text-m3-on-surface flex items-center gap-1">
+                  <CalendarIcon className="w-3.5 h-3.5 text-m3-primary" />
                   <span>Nama Mata Kuliah</span>
                 </label>
                 <input
                   type="text"
                   value={newCourse}
                   onChange={(e) => setNewCourse(e.target.value)}
-                  placeholder="Contoh: Algoritma & Pemrograman"
+                  placeholder="Ketik nama mata kuliah (Contoh: Basis Data)..."
                   required
-                  className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                  autoFocus
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/40 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary font-medium"
                 />
               </div>
 
+              {/* 2. Tipe Jadwal */}
               <div className="space-y-1">
-                <label className="text-xs font-semibold text-m3-on-surface flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-m3-secondary" />
-                  <span>Hari Kuliah</span>
-                </label>
-                <select
-                  value={newDay}
-                  onChange={(e) => setNewDay(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none capitalize"
-                >
-                  {["senin", "selasa", "rabu", "kamis", "jumat", "sabtu"].map((d) => (
-                    <option key={d} value={d}>
-                      {d.charAt(0).toUpperCase() + d.slice(1)}
-                    </option>
-                  ))}
-                </select>
+                <label className="text-xs font-semibold text-m3-on-surface">Tipe Jadwal</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewClassType("reguler")}
+                    className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      newClassType === "reguler"
+                        ? "bg-m3-primary text-m3-on-primary border-m3-primary"
+                        : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
+                    }`}
+                  >
+                    Jadwal Reguler
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewClassType("pindahan")}
+                    className={`py-1.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                      newClassType === "pindahan"
+                        ? "bg-amber-600 text-white border-amber-600"
+                        : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
+                    }`}
+                  >
+                    Pindahan Dosen
+                  </button>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* 3. Hari & Jam */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-m3-secondary">Hari</label>
+                  <select
+                    value={newDay}
+                    onChange={(e) => setNewDay(e.target.value)}
+                    className="w-full px-2.5 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none capitalize"
+                  >
+                    {["senin", "selasa", "rabu", "kamis", "jumat", "sabtu"].map((d) => (
+                      <option key={d} value={d}>
+                        {d.charAt(0).toUpperCase() + d.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-m3-secondary">Jam Mulai</label>
                   <input
@@ -1325,7 +1419,7 @@ export default function ScheduleCalendar({
                     onChange={(e) => setNewStartTime(e.target.value)}
                     placeholder="08.00"
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
+                    className="w-full px-2.5 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />
                 </div>
 
@@ -1337,55 +1431,67 @@ export default function ScheduleCalendar({
                     onChange={(e) => setNewEndTime(e.target.value)}
                     placeholder="10.00"
                     required
-                    className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
+                    className="w-full px-2.5 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />
                 </div>
               </div>
 
-              {/* Optional Fields: Ruang & Dosen */}
-              <div className="grid grid-cols-2 gap-3 pt-1 border-t border-m3-outline-variant/40">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-m3-secondary flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-m3-secondary" />
-                    <span>Ruang (Opsional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={newRoom}
-                    onChange={(e) => setNewRoom(e.target.value)}
-                    placeholder="Contoh: Gd. B 201"
-                    className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/20 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
-                  />
-                </div>
+              {/* 4. Opsi Lanjutan (Ruang & Dosen) - Collapsible */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedAdd(!showAdvancedAdd)}
+                  className="text-[11px] font-semibold text-m3-primary hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>{showAdvancedAdd ? "− Sembunyikan Detail Opsional" : "+ Tambah Ruang & Nama Dosen"}</span>
+                </button>
 
-                <div className="space-y-1">
-                  <label className="text-[11px] font-medium text-m3-secondary flex items-center gap-1">
-                    <User className="w-3 h-3 text-m3-secondary" />
-                    <span>Dosen (Opsional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={newLecturer}
-                    onChange={(e) => setNewLecturer(e.target.value)}
-                    placeholder="Nama dosen"
-                    className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/20 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
-                  />
-                </div>
+                {showAdvancedAdd && (
+                  <div className="grid grid-cols-2 gap-3 pt-2 animate-in fade-in">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-m3-secondary flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-m3-secondary" />
+                        <span>Ruang</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newRoom}
+                        onChange={(e) => setNewRoom(e.target.value)}
+                        placeholder="Contoh: Gd. B 201"
+                        className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/20 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-medium text-m3-secondary flex items-center gap-1">
+                        <User className="w-3 h-3 text-m3-secondary" />
+                        <span>Dosen Pengampu</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={newLecturer}
+                        onChange={(e) => setNewLecturer(e.target.value)}
+                        placeholder="Nama dosen"
+                        className="w-full px-3 py-2 rounded-xl bg-m3-surface-container/20 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-3 border-t border-m3-outline-variant/60 flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setIsAddScheduleOpen(false)}
-                  className="min-h-[44px] px-4 py-2 rounded-full text-xs font-semibold text-m3-secondary hover:bg-m3-surface-container transition-colors"
+                  className="min-h-[44px] px-4 py-2 rounded-full text-xs font-semibold text-m3-secondary hover:bg-m3-surface-container transition-colors cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="min-h-[44px] px-5 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs"
+                  className="min-h-[44px] px-5 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs cursor-pointer"
                 >
-                  Simpan Jadwal
+                  Simpan Mata Kuliah
                 </button>
               </div>
             </form>

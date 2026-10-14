@@ -53,3 +53,4 @@ data/*.db-shm
 data/*.db-sync
 
 docs/
+public/storage/

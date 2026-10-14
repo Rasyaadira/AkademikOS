@@ -18,6 +18,7 @@ export async function PATCH(
       endTime,
       day,
       attendanceStatus,
+      classType,
     } = body;
 
     const current = db.prepare("SELECT * FROM schedule WHERE id = ?").get(id) as any;
@@ -34,10 +35,11 @@ export async function PATCH(
     const nextEndTime = endTime !== undefined ? endTime : current.end_time;
     const nextDay = day !== undefined ? day : current.day;
     const nextAttendance = attendanceStatus !== undefined ? attendanceStatus : current.attendance_status;
+    const nextClassType = classType !== undefined ? classType : (current.class_type || "reguler");
 
     db.prepare(`
       UPDATE schedule
-      SET course = ?, room = ?, lecturer = ?, start_hour = ?, duration_hours = ?, start_time = ?, end_time = ?, day = ?, attendance_status = ?
+      SET course = ?, room = ?, lecturer = ?, start_hour = ?, duration_hours = ?, start_time = ?, end_time = ?, day = ?, attendance_status = ?, class_type = ?
       WHERE id = ?
     `).run(
       nextCourse,
@@ -49,6 +51,7 @@ export async function PATCH(
       nextEndTime,
       nextDay,
       nextAttendance,
+      nextClassType,
       id
     );
 

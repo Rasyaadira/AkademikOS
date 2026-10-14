@@ -295,6 +295,12 @@ export default function HomeDashboard() {
 
   const firstName = profile.name.split(" ")[0] || "Mahasiswa";
 
+  // Academic week based on semester start (Sep 7, 2026) and reference date (Oct 1, 2026)
+  const semesterStart = new Date(2026, 8, 7);
+  const currentWeek = Math.floor(
+    (new Date(2026, 9, 1).getTime() - semesterStart.getTime()) / (7 * 86400000)
+  ) + 1;
+
   return (
     <div className="min-h-screen bg-[#F1F5F9] text-m3-on-surface flex flex-col md:flex-row antialiased p-2.5 sm:p-3.5 gap-3.5">
       {/* Mobile Top App Bar */}
@@ -369,6 +375,11 @@ export default function HomeDashboard() {
                 </span>
                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-m3-on-surface">
                   Halo, {firstName}
+                  {currentWeek >= 1 && (
+                    <span className="text-sm sm:text-base font-normal text-m3-secondary ml-2">
+                      (Minggu ke-{currentWeek})
+                    </span>
+                  )}
                 </h2>
               </div>
 
@@ -415,6 +426,7 @@ export default function HomeDashboard() {
                   onUpdateSchedule={handleUpdateSchedule}
                   onDeleteSchedule={handleDeleteSchedule}
                   onAddSchedule={handleAddSchedule}
+                  noAiMode={!!profile.noAiMode}
                 />
               </div>
 
@@ -465,6 +477,7 @@ export default function HomeDashboard() {
         onUploadSuccess={handleUploadSuccess}
         initialFile={droppedFile}
         courses={Array.from(new Set(schedules.map((s) => s.course).filter(Boolean)))}
+        noAiMode={!!profile.noAiMode}
       />
     </div>
   );

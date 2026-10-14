@@ -53,6 +53,7 @@ interface ScheduleCalendarProps {
   onDeleteSchedule?: (id: string) => void;
   onAddSchedule?: (newSched: ScheduleItem) => void;
   isExpanded?: boolean;
+  noAiMode?: boolean;
 }
 
 // Color palettes for distinct courses in calendar views
@@ -92,6 +93,7 @@ export default function ScheduleCalendar({
   onDeleteSchedule,
   onAddSchedule,
   isExpanded = false,
+  noAiMode = false,
 }: ScheduleCalendarProps) {
   const [viewMode, setViewMode] = useState<CalendarViewMode>("1hari");
   const [internalDay, setInternalDay] = useState("kamis");
@@ -231,9 +233,10 @@ export default function ScheduleCalendar({
     const match = (t.deadlineLabel || "").match(/(\d{1,2})[:.](\d{2})/);
     if (match) {
       const h = parseInt(match[1], 10);
-      return Math.min(Math.max(h, 7), 21);
+      if (h === 24) return 0;
+      return Math.min(Math.max(h, 0), 23);
     }
-    return 21;
+    return 0;
   };
 
   // Navigation handlers (tombol kanan kiri):
@@ -309,7 +312,7 @@ export default function ScheduleCalendar({
 
   // Academic week estimation
   const semesterStart = new Date(2026, 8, 7);
-  const diffWeeks = Math.max(1, Math.floor((mondayDate.getTime() - semesterStart.getTime()) / (7 * 86400000)) + 1);
+  const diffWeeks = Math.floor((mondayDate.getTime() - semesterStart.getTime()) / (7 * 86400000)) + 1;
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, id: string) => {
@@ -386,11 +389,11 @@ export default function ScheduleCalendar({
     setNewLecturer("");
   };
 
-  // College hours for Day view (07.00 - 21.00 WIB)
-  const collegeHours = Array.from({ length: 15 }, (_, i) => i + 7);
+  // 24 Hours array for Day view (00.00 - 23.00 WIB)
+  const hours24 = Array.from({ length: 24 }, (_, i) => i);
 
-  // Standard daytime hours for 7-day matrix (07.00 - 21.00 WIB)
-  const matrixHours = Array.from({ length: 15 }, (_, i) => i + 7);
+  // 24 Hours array for 7-day matrix view (00.00 - 23.00 WIB)
+  const matrixHours = Array.from({ length: 24 }, (_, i) => i);
 
   // Filter schedules for the selected day in 1-day view
   const daySchedules = schedules.filter((s) => s.day === selectedDay);
@@ -476,9 +479,11 @@ export default function ScheduleCalendar({
                 <span className="text-xs sm:text-sm font-bold text-m3-on-surface">
                   Pekan Kuliah: {mondayDate.getDate()} {monthShort[mondayDate.getMonth()]} – {sundayDate.getDate()} {monthShort[sundayDate.getMonth()]} {sundayDate.getFullYear()}
                 </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-m3-secondary-container text-m3-on-secondary-container">
-                  Minggu {diffWeeks}
-                </span>
+                {diffWeeks >= 1 && (
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-m3-secondary-container text-m3-on-secondary-container">
+                    Minggu {diffWeeks}
+                  </span>
+                )}
               </div>
             )}
 
@@ -505,8 +510,20 @@ export default function ScheduleCalendar({
             </button>
           </div>
 
-          {/* Right Action Bar: Filter Dropdown + Hari Ini (di samping filter) + Tambah Jadwal */}
+          {/* Right Action Bar: Hari Ini (di samping KIRI filter) + Filter Dropdown + Tambah Jadwal */}
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Quick Jump: Di samping kiri Filter (tanpa emoji) */}
+            {!isViewingToday && (
+              <button
+                type="button"
+                onClick={handleJumpToToday}
+                className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-700 transition-all shadow-xs active:scale-95"
+                title={`Lompat kembali ke ${viewMode === "1hari" ? "Hari Ini" : viewMode === "7hari" ? "Minggu Ini" : "Bulan Ini"}`}
+              >
+                <span>{viewMode === "1hari" ? "Hari Ini" : viewMode === "7hari" ? "Minggu Ini" : "Bulan Ini"}</span>
+              </button>
+            )}
+
             {/* Filter Dropdown Popover */}
             <div className="relative">
               <button
@@ -555,26 +572,13 @@ export default function ScheduleCalendar({
               )}
             </div>
 
-            {/* Quick Jump: Hanya tampil jika TIDAK di periode aktif, tepat di samping Filter */}
-            {!isViewingToday && (
-              <button
-                type="button"
-                onClick={handleJumpToToday}
-                className="text-[11px] font-bold px-3 py-1 rounded-full bg-blue-50 hover:bg-blue-100 border border-blue-300 text-blue-700 transition-all shadow-xs flex items-center gap-1 active:scale-95"
-                title={`Lompat kembali ke ${viewMode === "1hari" ? "Hari Ini" : viewMode === "7hari" ? "Minggu Ini" : "Bulan Ini"}`}
-              >
-                <CalendarIcon className="w-3 h-3 text-blue-600" />
-                <span>{viewMode === "1hari" ? "Hari Ini" : viewMode === "7hari" ? "Minggu Ini" : "Bulan Ini"}</span>
-              </button>
-            )}
-
-            {/* Tombol Impor Jadwal AI (Hanya jika jadwal masih kosong) */}
-            {schedules.length === 0 && (
+            {/* Tombol Impor Jadwal AI (Hanya jika jadwal masih kosong dan AI mode aktif) */}
+            {!noAiMode && schedules.length === 0 && (
               <button
                 type="button"
                 onClick={() => setIsImportScheduleOpen(true)}
                 className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all shadow-2xs"
-                title="Unggah berkas PDF atau foto jadwal kuliah untuk diekstrak otomatis dengan Gemini AI"
+                title="Unggah berkas PDF atau foto jadwal kuliah untuk diekstrak otomatis"
               >
                 <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Impor AI</span>
@@ -631,12 +635,12 @@ export default function ScheduleCalendar({
         </div>
       )}
 
-      {/* VIEW 1: 1 HARI (JAM KULIAH 07.00 - 21.00 WIB) */}
+      {/* VIEW 1: 1 HARI (24 JAM 00.00 - 23.00 WIB) */}
       {viewMode === "1hari" && (
         <div className="flex-1 flex flex-col min-h-0 space-y-2">
-          {/* College Hours Drag & Drop Container */}
+          {/* 24 Jam Drag & Drop Container */}
           <div className="flex-1 overflow-y-auto pr-1 space-y-1 border border-m3-outline-variant/60 rounded-2xl p-2 bg-m3-surface-container/20">
-            {collegeHours.map((hour) => {
+            {hours24.map((hour) => {
               const hourLabel = `${String(hour).padStart(2, "0")}.00`;
               const matchedClasses = filterCourses ? daySchedules.filter((s) => s.startHour === hour) : [];
               const matchedTasks = filterTasks
@@ -1211,70 +1215,72 @@ export default function ScheduleCalendar({
                 <X className="w-4 h-4" />
               </button>
             </div>
-            {/* Quick Autofill from Photo / Image */}
-            <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5 text-indigo-600" />
-                  <span>Isi dari Foto / Gambar Jadwal</span>
-                </span>
-                <label className="cursor-pointer px-3 py-1 rounded-full bg-white hover:bg-indigo-100 border border-indigo-300 text-indigo-700 text-[10px] font-bold shadow-2xs transition-all flex items-center gap-1">
-                  {isExtractingPhoto ? (
-                    <>
-                      <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
-                      <span>Menganalisis...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="w-3 h-3 text-indigo-600" />
-                      <span>Pilih Foto</span>
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*,.pdf"
-                    disabled={isExtractingPhoto}
-                    onChange={handlePhotoUploadForAdd}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              {photoError && (
-                <p className="text-[10px] text-rose-600 font-medium">{photoError}</p>
-              )}
-
-              {extractedCandidates.length > 1 && (
-                <div className="pt-1.5 border-t border-indigo-200/60 space-y-1">
-                  <p className="text-[10px] font-medium text-indigo-800">
-                    Ditemukan {extractedCandidates.length} mata kuliah dari gambar. Klik untuk memilih:
-                  </p>
-                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
-                    {extractedCandidates.map((c, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => {
-                          setNewCourse(c.course || "");
-                          if (c.day) setNewDay(c.day.toLowerCase());
-                          if (c.startTime) setNewStartTime(c.startTime);
-                          if (c.endTime) setNewEndTime(c.endTime);
-                          if (c.room) setNewRoom(c.room);
-                          if (c.lecturer) setNewLecturer(c.lecturer);
-                        }}
-                        className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border transition-all ${
-                          newCourse === c.course
-                            ? "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50"
-                        }`}
-                      >
-                        {c.course} ({c.day} {c.startTime})
-                      </button>
-                    ))}
-                  </div>
+            {/* Quick Autofill from Photo / Image (Hanya jika mode AI aktif) */}
+            {!noAiMode && (
+              <div className="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-200/80 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-bold text-indigo-900 flex items-center gap-1.5">
+                    <Camera className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Isi dari Foto / Gambar Jadwal</span>
+                  </span>
+                  <label className="cursor-pointer px-3 py-1 rounded-full bg-white hover:bg-indigo-100 border border-indigo-300 text-indigo-700 text-[10px] font-bold shadow-2xs transition-all flex items-center gap-1">
+                    {isExtractingPhoto ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin text-indigo-600" />
+                        <span>Menganalisis...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3 h-3 text-indigo-600" />
+                        <span>Pilih Foto</span>
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      disabled={isExtractingPhoto}
+                      onChange={handlePhotoUploadForAdd}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
-              )}
-            </div>
+
+                {photoError && (
+                  <p className="text-[10px] text-rose-600 font-medium">{photoError}</p>
+                )}
+
+                {extractedCandidates.length > 1 && (
+                  <div className="pt-1.5 border-t border-indigo-200/60 space-y-1">
+                    <p className="text-[10px] font-medium text-indigo-800">
+                      Ditemukan {extractedCandidates.length} mata kuliah dari gambar. Klik untuk memilih:
+                    </p>
+                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                      {extractedCandidates.map((c, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => {
+                            setNewCourse(c.course || "");
+                            if (c.day) setNewDay(c.day.toLowerCase());
+                            if (c.startTime) setNewStartTime(c.startTime);
+                            if (c.endTime) setNewEndTime(c.endTime);
+                            if (c.room) setNewRoom(c.room);
+                            if (c.lecturer) setNewLecturer(c.lecturer);
+                          }}
+                          className={`text-[9px] font-semibold px-2 py-0.5 rounded-md border transition-all ${
+                            newCourse === c.course
+                              ? "bg-indigo-600 text-white border-indigo-600"
+                              : "bg-white text-indigo-700 border-indigo-200 hover:bg-indigo-50"
+                          }`}
+                        >
+                          {c.course} ({c.day} {c.startTime})
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <form onSubmit={handleSaveNewSchedule} className="space-y-3.5 text-xs">
               <div className="space-y-1">

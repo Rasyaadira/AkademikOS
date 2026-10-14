@@ -89,6 +89,19 @@ const getCourseBadgeColor = (courseName: string) => {
   return "bg-slate-100 text-slate-900 border-slate-300 hover:bg-slate-200";
 };
 
+export const QUICK_COURSE_SUGGESTIONS = [
+  "Basis Data",
+  "Kecerdasan Buatan",
+  "Sistem Operasi",
+  "Jaringan Komputer",
+  "Rekayasa Perangkat Lunak",
+  "Algoritma & Pemrograman",
+  "Matematika Diskrit",
+  "Metode Numerik",
+  "Desain UI/UX",
+  "Struktur Data",
+];
+
 export default function ScheduleCalendar({
   schedules,
   tasks = [],
@@ -218,12 +231,14 @@ export default function ScheduleCalendar({
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
+    const yy = String(yyyy).slice(-2);
     const dateStr = `${yyyy}-${mm}-${dd}`;
+    const dateFormatted = `${dd}/${mm}/${yy}`;
 
     return {
       key,
       label: dayLabels[idx],
-      date: `${d.getDate()} ${monthShort[d.getMonth()]}`,
+      date: dateFormatted,
       dayNum: d.getDate(),
       fullDate: d,
       dateStr,
@@ -304,7 +319,8 @@ export default function ScheduleCalendar({
   // State for date-context when editing / deleting a single occurrence
   const [editingDateContext, setEditingDateContext] = useState<string>("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isZoomFit, setIsZoomFit] = useState(false);
+  const [isZoomFit, setIsZoomFit] = useState(true);
+  const [quickAddCourse, setQuickAddCourse] = useState("");
 
   // Dynamic filter for schedules on a specific date (handling recurring vs single instance vs exclusions)
   const getSchedulesForDate = (dateStr: string, dayKey: string): ScheduleItem[] => {
@@ -465,15 +481,60 @@ export default function ScheduleCalendar({
     setNewLecturer("");
   };
 
-  // 24 Hours array for Day view (00.00 - 23.00 WIB)
-  const hours24 = Array.from({ length: 24 }, (_, i) => i);
+  const handleQuickAdd = () => {
+    if (!quickAddCourse.trim()) return;
+    const newSched: ScheduleItem = {
+      id: `sch-${Date.now()}`,
+      course: quickAddCourse.trim(),
+      code: "",
+      room: "-",
+      day: selectedDay,
+      lecturer: "-",
+      startTime: "09.00",
+      endTime: "11.30",
+      startHour: 9,
+      durationHours: 2,
+      status: "upcoming",
+      attendanceStatus: "pending",
+      classType: "reguler",
+    };
+    if (onAddSchedule) {
+      onAddSchedule(newSched);
+    }
+    setQuickAddCourse("");
+  };
 
-  // 24 Hours array for 7-day matrix view (00.00 - 23.00 WIB)
-  const matrixHours = Array.from({ length: 24 }, (_, i) => i);
+  // Base active hours range: 05:00 s.d. 20:00 (jam 5 pagi sampai jam 8 malam)
+  const baseStartHour = 5;
+  const baseEndHour = 20;
 
   // Active date string for 1-day view
   const current1DayDateStr = activeDayObj?.dateStr || dayKeyToDateStr[selectedDay] || "";
   const daySchedules = getSchedulesForDate(current1DayDateStr, selectedDay);
+
+  // 1-Day View: Dynamic hours (05:00 - 20:00, ditambah jam luar jika ada jadwal atau tenggat seperti jam 23:00 / 11 malam)
+  const dayTasksList = tasks.filter((t) => {
+    const isDay =
+      t.deadlineDate.startsWith(dayKeyToDateStr[selectedDay] || "") ||
+      t.deadlineDate.toLowerCase().includes(selectedDay);
+    return isDay;
+  });
+  const dayTaskHours = new Set(dayTasksList.map(getTaskHour));
+  const dayScheduleHours = new Set(daySchedules.map((s) => s.startHour));
+
+  const hours1Day = Array.from({ length: 24 }, (_, i) => i).filter((h) => {
+    if (h >= baseStartHour && h <= baseEndHour) return true;
+    return dayScheduleHours.has(h) || dayTaskHours.has(h);
+  });
+
+  // 7-Day Matrix View: Dynamic hours (05:00 - 20:00, ditambah jam luar jika ada jadwal atau tenggat)
+  const weeklyTaskHours = new Set(tasks.map(getTaskHour));
+  const weeklyScheduleHours = new Set(schedules.map((s) => s.startHour));
+
+  const matrixHours = Array.from({ length: 24 }, (_, i) => i).filter((h) => {
+    if (h >= baseStartHour && h <= baseEndHour) return true;
+    return weeklyScheduleHours.has(h) || weeklyTaskHours.has(h);
+  });
 
   return (
     <div
@@ -570,7 +631,7 @@ export default function ScheduleCalendar({
             {viewMode === "7hari" && (
               <div className="flex items-center gap-2">
                 <span className="text-xs sm:text-sm font-bold text-m3-on-surface">
-                  Pekan Kuliah: {mondayDate.getDate()} {monthShort[mondayDate.getMonth()]} – {sundayDate.getDate()} {monthShort[sundayDate.getMonth()]} {sundayDate.getFullYear()}
+                  Pekan: {String(mondayDate.getDate()).padStart(2, "0")}/{String(mondayDate.getMonth() + 1).padStart(2, "0")}/{String(mondayDate.getFullYear()).slice(-2)} – {String(sundayDate.getDate()).padStart(2, "0")}/{String(sundayDate.getMonth() + 1).padStart(2, "0")}/{String(sundayDate.getFullYear()).slice(-2)}
                 </span>
                 {diffWeeks >= 1 && (
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-m3-secondary-container text-m3-on-secondary-container">
@@ -694,6 +755,47 @@ export default function ScheduleCalendar({
             </button>
           </div>
         </div>
+
+        {/* Quick Add Bar: Tambah Cepat dengan Chip Rekomendasi */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-2 rounded-2xl bg-white border border-m3-outline-variant/80 shadow-2xs">
+          <div className="flex-1 flex items-center gap-2 px-3 py-1 bg-m3-surface-container/30 rounded-xl border border-m3-outline-variant/50">
+            <CalendarIcon className="w-3.5 h-3.5 text-m3-primary flex-shrink-0" />
+            <input
+              type="text"
+              value={quickAddCourse}
+              onChange={(e) => setQuickAddCourse(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleQuickAdd();
+                }
+              }}
+              placeholder="Tambah jadwal cepat... ketik nama matkul lalu Enter"
+              className="w-full bg-transparent text-xs text-m3-on-surface focus:outline-none placeholder:text-m3-secondary"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {QUICK_COURSE_SUGGESTIONS.slice(0, 4).map((sugg) => (
+              <button
+                key={sugg}
+                type="button"
+                onClick={() => setQuickAddCourse(sugg)}
+                className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-m3-surface-container hover:bg-m3-primary/10 text-m3-on-surface-variant hover:text-m3-primary border border-m3-outline-variant/60 transition-colors whitespace-nowrap flex-shrink-0"
+              >
+                + {sugg}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={handleQuickAdd}
+              disabled={!quickAddCourse.trim()}
+              className="px-3 py-1.5 rounded-xl bg-m3-primary text-m3-on-primary text-xs font-bold hover:brightness-95 disabled:opacity-40 transition-all flex items-center gap-1 flex-shrink-0 cursor-pointer shadow-xs"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Tambah</span>
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* BANNER JIKA JADWAL KOSONG */}
@@ -733,7 +835,7 @@ export default function ScheduleCalendar({
         <div className="flex-1 flex flex-col min-h-0 space-y-2">
           {/* 24 Jam Drag & Drop Container */}
           <div className="flex-1 overflow-y-auto pr-1 space-y-1 border border-m3-outline-variant/60 rounded-2xl p-2 bg-m3-surface-container/20">
-            {hours24.map((hour) => {
+            {hours1Day.map((hour) => {
               const hourLabel = `${String(hour).padStart(2, "0")}.00`;
               const matchedClasses = filterCourses ? daySchedules.filter((s) => s.startHour === hour) : [];
               const matchedTasks = filterTasks
@@ -821,25 +923,41 @@ export default function ScheduleCalendar({
                       </div>
                     ))}
 
-                    {matchedTasks.map((t) => (
-                      <div
-                        key={t.id}
-                        className={`rounded-xl border border-amber-300 bg-amber-50 text-amber-900 flex items-center justify-between gap-2 ${
-                          isZoomFit ? "p-1 px-2 text-[10px]" : "p-1.5 px-2.5 text-xs"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 flex-shrink-0">
-                            Tenggat Tugas
+                    {matchedTasks.map((t) => {
+                      const isUlangan = t.taskType === "ulangan";
+                      const isKuis = t.taskType === "kuis";
+                      const tagLabel = isUlangan ? "🎯 Ulangan" : isKuis ? "⚡ Kuis" : "📝 Tugas";
+                      const tagClass = isUlangan
+                        ? "border-rose-300 bg-rose-50 text-rose-900"
+                        : isKuis
+                        ? "border-purple-300 bg-purple-50 text-purple-900"
+                        : "border-amber-300 bg-amber-50 text-amber-900";
+                      const badgeBg = isUlangan
+                        ? "bg-rose-200 text-rose-900"
+                        : isKuis
+                        ? "bg-purple-200 text-purple-900"
+                        : "bg-amber-200 text-amber-900";
+
+                      return (
+                        <div
+                          key={t.id}
+                          className={`rounded-xl border flex items-center justify-between gap-2 ${tagClass} ${
+                            isZoomFit ? "p-1 px-2 text-[10px]" : "p-1.5 px-2.5 text-xs"
+                          }`}
+                        >
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`text-[8px] font-bold px-1.5 py-0.2 rounded flex-shrink-0 ${badgeBg}`}>
+                              {tagLabel}
+                            </span>
+                            <span className="font-bold truncate">{t.title}</span>
+                            <span className="text-[10px] opacity-75 truncate">({t.course})</span>
+                          </div>
+                          <span className="text-[9px] font-semibold px-2 py-0.2 rounded-full bg-white/80 border border-black/10 flex-shrink-0">
+                            {t.deadlineLabel || "23:59"}
                           </span>
-                          <span className="font-bold truncate">{t.title}</span>
-                          <span className="text-[10px] text-amber-700 truncate">({t.course})</span>
                         </div>
-                        <span className="text-[9px] font-semibold px-2 py-0.2 rounded-full bg-white border border-amber-200 flex-shrink-0">
-                          {t.difficulty || "Sedang"} • {t.deadlineLabel || "23:59"}
-                        </span>
-                      </div>
-                    ))}
+                      );
+                    })}
 
                     {!hasItems && (
                       <div className="h-full flex items-center text-[10px] text-m3-secondary/30 select-none">
@@ -895,11 +1013,11 @@ export default function ScheduleCalendar({
                 })}
               </div>
 
-              {/* TENGGAT TUGAS ROW DALAM MATRIKS 7 HARI (JIKA FILTER TUGAS AKTIF) */}
+              {/* TUGAS, ULANGAN & KUIS ROW DALAM MATRIKS 7 HARI (JIKA FILTER TUGAS AKTIF) */}
               {filterTasks && (
                 <div className="flex border-b-2 border-amber-200/90 bg-amber-50/50 min-h-[34px]">
                   <div className="w-16 p-1 border-r border-m3-outline-variant flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-amber-800 bg-amber-100/70">
-                    Tenggat
+                    Agenda
                   </div>
                   {daysList.map((d) => {
                     const dayTasks = tasks.filter((t) => {
@@ -916,22 +1034,33 @@ export default function ScheduleCalendar({
                         className="flex-1 min-w-[95px] border-r border-m3-outline-variant/40 p-1 flex flex-col justify-center gap-0.5"
                       >
                         {dayTasks.length > 0 ? (
-                          dayTasks.map((t) => (
-                            <div
-                              key={t.id}
-                              className={`w-full p-0.5 px-1.5 rounded text-[8px] font-bold truncate flex items-center justify-between gap-1 shadow-2xs ${
-                                t.completed
-                                  ? "bg-slate-100 text-slate-400 line-through border border-slate-200"
-                                  : "bg-amber-100 text-amber-900 border border-amber-300"
-                              }`}
-                              title={`${t.title} (${t.course}) - ${t.deadlineLabel}`}
-                            >
-                              <span className="truncate">{t.title}</span>
-                              <span className="text-[7px] opacity-75 flex-shrink-0">
-                                {t.deadlineLabel || "23:59"}
-                              </span>
-                            </div>
-                          ))
+                          dayTasks.map((t) => {
+                            const isUlangan = t.taskType === "ulangan";
+                            const isKuis = t.taskType === "kuis";
+                            const icon = isUlangan ? "🎯" : isKuis ? "⚡" : "📝";
+                            const tagStyle = isUlangan
+                              ? "bg-rose-100 text-rose-900 border-rose-300"
+                              : isKuis
+                              ? "bg-purple-100 text-purple-900 border-purple-300"
+                              : "bg-amber-100 text-amber-900 border-amber-300";
+
+                            return (
+                              <div
+                                key={t.id}
+                                className={`w-full p-0.5 px-1.5 rounded text-[8px] font-bold truncate flex items-center justify-between gap-1 shadow-2xs ${
+                                  t.completed
+                                    ? "bg-slate-100 text-slate-400 line-through border border-slate-200"
+                                    : tagStyle
+                                }`}
+                                title={`${isUlangan ? "Ulangan" : isKuis ? "Kuis" : "Tugas"}: ${t.title} (${t.course}) - ${t.deadlineLabel}`}
+                              >
+                                <span className="truncate">{icon} {t.title}</span>
+                                <span className="text-[7px] opacity-75 flex-shrink-0">
+                                  {t.deadlineLabel || "23:59"}
+                                </span>
+                              </div>
+                            );
+                          })
                         ) : (
                           <div className="text-center text-[9px] text-slate-300 select-none">—</div>
                         )}
@@ -1018,15 +1147,26 @@ export default function ScheduleCalendar({
                             </div>
                           )}
 
-                          {tasksInCell.map((t) => (
-                            <div
-                              key={t.id}
-                              className="w-full p-0.5 px-1 rounded text-[8px] font-bold bg-amber-100 text-amber-900 border border-amber-300 truncate"
-                              title={`Tenggat: ${t.title}`}
-                            >
-                              [Tugas] {t.title}
-                            </div>
-                          ))}
+                          {tasksInCell.map((t) => {
+                            const isUlangan = t.taskType === "ulangan";
+                            const isKuis = t.taskType === "kuis";
+                            const tagLabel = isUlangan ? "[Ulangan]" : isKuis ? "[Kuis]" : "[Tugas]";
+                            const tagStyle = isUlangan
+                              ? "bg-rose-100 text-rose-800 border-rose-300"
+                              : isKuis
+                              ? "bg-purple-100 text-purple-800 border-purple-300"
+                              : "bg-amber-100 text-amber-900 border-amber-300";
+
+                            return (
+                              <div
+                                key={t.id}
+                                className={`w-full p-0.5 px-1 rounded text-[8px] font-bold border truncate ${tagStyle}`}
+                                title={`${tagLabel} ${t.title}`}
+                              >
+                                {tagLabel} {t.title}
+                              </div>
+                            );
+                          })}
 
                           {!classInCell && tasksInCell.length === 0 && (
                             <div className="w-full h-full text-center text-slate-300 text-[10px] flex items-center justify-center select-none">
@@ -1160,15 +1300,26 @@ export default function ScheduleCalendar({
                             );
                           })}
 
-                          {dayTasks.map((tk) => (
-                            <div
-                              key={tk.id}
-                              className="px-1.5 py-0.5 rounded bg-red-100 text-red-800 border border-red-200 text-[9px] font-bold truncate"
-                              title={`Tenggat: ${tk.title}`}
-                            >
-                              Tenggat: {tk.title}
-                            </div>
-                          ))}
+                          {dayTasks.map((tk) => {
+                            const isUlangan = tk.taskType === "ulangan";
+                            const isKuis = tk.taskType === "kuis";
+                            const tagLabel = isUlangan ? "🎯 Ulangan" : isKuis ? "⚡ Kuis" : "📝 Tugas";
+                            const tagStyle = isUlangan
+                              ? "bg-rose-100 text-rose-800 border-rose-200"
+                              : isKuis
+                              ? "bg-purple-100 text-purple-800 border-purple-200"
+                              : "bg-amber-100 text-amber-900 border-amber-200";
+
+                            return (
+                              <div
+                                key={tk.id}
+                                className={`px-1.5 py-0.5 rounded text-[8px] font-bold truncate border ${tagStyle}`}
+                                title={`${tagLabel}: ${tk.title}`}
+                              >
+                                {tagLabel}: {tk.title}
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     );
@@ -1308,18 +1459,17 @@ export default function ScheduleCalendar({
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-m3-secondary">Jam Mulai</label>
                   <input
-                    type="text"
-                    value={editingItem.startTime}
+                    type="time"
+                    value={editingItem.startTime ? editingItem.startTime.replace(".", ":") : "09:00"}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const parsedHour = parseInt(val.split(".")[0]) || editingItem.startHour;
+                      const parsedHour = parseInt(val.split(":")[0], 10) || editingItem.startHour;
                       setEditingItem({
                         ...editingItem,
-                        startTime: val,
+                        startTime: val.replace(":", "."),
                         startHour: parsedHour,
                       });
                     }}
-                    placeholder="09.00"
                     required
                     className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />
@@ -1328,10 +1478,15 @@ export default function ScheduleCalendar({
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-m3-secondary">Jam Selesai</label>
                   <input
-                    type="text"
-                    value={editingItem.endTime}
-                    onChange={(e) => setEditingItem({ ...editingItem, endTime: e.target.value })}
-                    placeholder="11.30"
+                    type="time"
+                    value={editingItem.endTime ? editingItem.endTime.replace(".", ":") : "11:30"}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setEditingItem({
+                        ...editingItem,
+                        endTime: val.replace(":", "."),
+                      });
+                    }}
                     required
                     className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />
@@ -1508,6 +1663,23 @@ export default function ScheduleCalendar({
                   autoFocus
                   className="w-full px-3.5 py-2.5 rounded-xl bg-m3-surface-container/40 border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary font-medium"
                 />
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pt-1">
+                  <span className="text-[10px] text-m3-secondary flex-shrink-0">Saran:</span>
+                  {QUICK_COURSE_SUGGESTIONS.slice(0, 5).map((sugg) => (
+                    <button
+                      key={sugg}
+                      type="button"
+                      onClick={() => setNewCourse(sugg)}
+                      className={`text-[10px] font-semibold px-2 py-0.5 rounded-lg border transition-colors flex-shrink-0 cursor-pointer ${
+                        newCourse === sugg
+                          ? "bg-m3-primary text-m3-on-primary border-m3-primary"
+                          : "bg-m3-surface-container hover:bg-m3-surface-container-high text-m3-on-surface-variant border-m3-outline-variant/60"
+                      }`}
+                    >
+                      {sugg}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* 2. Tipe Jadwal */}
@@ -1559,10 +1731,9 @@ export default function ScheduleCalendar({
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-m3-secondary">Jam Mulai</label>
                   <input
-                    type="text"
-                    value={newStartTime}
-                    onChange={(e) => setNewStartTime(e.target.value)}
-                    placeholder="08.00"
+                    type="time"
+                    value={newStartTime ? newStartTime.replace(".", ":") : "08:00"}
+                    onChange={(e) => setNewStartTime(e.target.value.replace(":", "."))}
                     required
                     className="w-full px-2.5 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />
@@ -1571,10 +1742,9 @@ export default function ScheduleCalendar({
                 <div className="space-y-1">
                   <label className="text-xs font-semibold text-m3-secondary">Jam Selesai</label>
                   <input
-                    type="text"
-                    value={newEndTime}
-                    onChange={(e) => setNewEndTime(e.target.value)}
-                    placeholder="10.00"
+                    type="time"
+                    value={newEndTime ? newEndTime.replace(".", ":") : "10:00"}
+                    onChange={(e) => setNewEndTime(e.target.value.replace(":", "."))}
                     required
                     className="w-full px-2.5 py-2 rounded-xl bg-m3-surface-container/30 border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                   />

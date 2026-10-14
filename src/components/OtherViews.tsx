@@ -97,6 +97,7 @@ interface OtherViewsProps {
     sessionNo?: number;
     topic?: string;
   } | null;
+  selectedCourseForRps?: string;
 }
 
 // Data structures for RPS Folder Tree & Document Preview (40/60)
@@ -161,6 +162,7 @@ export default function OtherViews({
   onOpenQuickTask,
   onUpdateTask,
   newUploadedDoc,
+  selectedCourseForRps,
 }: OtherViewsProps) {
   const [formData, setFormData] = useState<StudentProfile>(profile);
   const [isSaved, setIsSaved] = useState(false);
@@ -234,6 +236,23 @@ export default function OtherViews({
       })
       .catch((err) => console.error("Error loading documents:", err));
   }, []);
+
+  // Jump to specific course folder when navigated from task list
+  React.useEffect(() => {
+    if (selectedCourseForRps && activeTab === "rps" && rpsFolders.length > 0) {
+      const match = rpsFolders.find(
+        (f) =>
+          f.courseName.toLowerCase().includes(selectedCourseForRps.toLowerCase()) ||
+          selectedCourseForRps.toLowerCase().includes(f.courseName.toLowerCase())
+      );
+      if (match) {
+        setOpenRpsFolderId(match.id);
+        if (match.files.length > 0) {
+          setSelectedFileId(match.files[0].id);
+        }
+      }
+    }
+  }, [selectedCourseForRps, activeTab, rpsFolders]);
 
   // Sync newly uploaded document directly into matching course folder in RPS
   React.useEffect(() => {
@@ -1201,6 +1220,42 @@ export default function OtherViews({
                     </button>
                   </div>
                 </div>
+
+                {/* Tugas, Ulangan & Kuis Terkait Mata Kuliah Ini */}
+                {(() => {
+                  const courseRelatedTasks = tasks.filter((t) =>
+                    t.course.toLowerCase().includes((currentFolder?.courseName || "").toLowerCase()) ||
+                    (currentFolder?.courseName || "").toLowerCase().includes(t.course.toLowerCase())
+                  );
+                  if (courseRelatedTasks.length === 0) return null;
+
+                  return (
+                    <div className="flex items-center gap-2 p-2.5 rounded-2xl bg-amber-50/90 border border-amber-200 text-amber-900 text-xs shadow-2xs">
+                      <span className="font-bold flex items-center gap-1 text-[11px] flex-shrink-0">
+                        <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Tugas Terkait ({courseRelatedTasks.length}):</span>
+                      </span>
+                      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar flex-1">
+                        {courseRelatedTasks.map((t) => {
+                          const isUlangan = t.taskType === "ulangan";
+                          const isKuis = t.taskType === "kuis";
+                          const icon = isUlangan ? "🎯" : isKuis ? "⚡" : "📝";
+                          const typeLabel = isUlangan ? "Ulangan" : isKuis ? "Kuis" : "Tugas";
+                          return (
+                            <span
+                              key={t.id}
+                              className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[10px] font-semibold whitespace-nowrap shadow-2xs flex items-center gap-1.5"
+                            >
+                              <span>{icon}</span>
+                              <span className="font-bold text-amber-950 truncate max-w-[150px]">{t.title}</span>
+                              <span className="text-[9px] text-amber-700 font-normal">({typeLabel} • {t.deadlineLabel})</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* AS-IS VIEWER: FISIK BERKAS ASLI (PDF, GAMBAR, ATAU OFFICE) */}
                 <div className="flex-1 w-full h-full min-h-[480px] rounded-2xl border border-m3-outline-variant bg-slate-100 flex flex-col overflow-hidden relative shadow-inner">

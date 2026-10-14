@@ -45,6 +45,7 @@ export default function HomeDashboard() {
   });
 
   const [bannerNotice, setBannerNotice] = useState<string | null>(null);
+  const [selectedCourseForRps, setSelectedCourseForRps] = useState<string>("");
 
   // Fetch data from SQLite DB for the single user
   const loadUserData = async () => {
@@ -418,11 +419,13 @@ export default function HomeDashboard() {
                 <div className="flex items-center gap-2 text-xs bg-m3-surface-container-low border border-m3-outline-variant px-3 py-1.5 rounded-full">
                   <CalendarDays className="w-3.5 h-3.5 text-m3-secondary" />
                   <span className="text-m3-on-surface font-semibold">
-                    {new Date().toLocaleDateString("id-ID", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                    })}
+                    {(() => {
+                      const now = new Date();
+                      const dd = String(now.getDate()).padStart(2, "0");
+                      const mm = String(now.getMonth() + 1).padStart(2, "0");
+                      const yy = String(now.getFullYear()).slice(-2);
+                      return `${dd}/${mm}/${yy}`;
+                    })()}
                   </span>
                 </div>
               </div>
@@ -470,6 +473,10 @@ export default function HomeDashboard() {
                   onDeleteTask={handleDeleteTask}
                   onUpdateTask={handleUpdateTask}
                   onOpenQuickTask={() => setIsQuickTaskOpen(true)}
+                  onOpenCourseMaterial={(courseName) => {
+                    setSelectedCourseForRps(courseName);
+                    setActiveTab("rps");
+                  }}
                 />
               </div>
             </div>
@@ -491,6 +498,7 @@ export default function HomeDashboard() {
             onOpenQuickTask={() => setIsQuickTaskOpen(true)}
             onUpdateTask={handleUpdateTask}
             newUploadedDoc={newUploadedDoc}
+            selectedCourseForRps={selectedCourseForRps}
           />
         )}
       </main>

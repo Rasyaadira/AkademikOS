@@ -14,7 +14,7 @@ export interface TaskItem {
   title: string;
   course: string;
   difficulty?: "mudah" | "sedang" | "sulit";
-  taskType?: "presentasi" | "dokumen" | "praktik" | "tugas" | "proyek";
+  taskType?: "tugas" | "ulangan" | "kuis" | "presentasi" | "dokumen" | "praktik" | "proyek";
   deadlineLabel: string;
   deadlineDate: string;
   weight: string;

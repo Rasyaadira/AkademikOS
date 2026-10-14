@@ -6,8 +6,8 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId") || DEFAULT_USER_ID;
 
-    // Return schedules for active personal user
-    const schedules = db.prepare("SELECT * FROM schedule WHERE user_id = ? OR user_id = 'user-me' ORDER BY start_hour ASC").all(userId);
+    // Return schedules for active user
+    const schedules = db.prepare("SELECT * FROM schedule WHERE user_id = ? ORDER BY start_hour ASC").all(userId);
     const formatted = schedules.map((s: any) => {
       let parsedExcluded: string[] = [];
       try {

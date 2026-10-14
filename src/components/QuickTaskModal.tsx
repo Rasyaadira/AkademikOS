@@ -34,6 +34,7 @@ export default function QuickTaskModal({
   const [isCustomCourse, setIsCustomCourse] = useState(false);
   const [customCourseName, setCustomCourseName] = useState("");
   const [difficulty, setDifficulty] = useState<"mudah" | "sedang" | "sulit">("sedang");
+  const [taskType, setTaskType] = useState<"tugas" | "ulangan" | "kuis">("tugas");
 
   React.useEffect(() => {
     if (availableCourses.length > 0 && !isCustomCourse) {
@@ -52,6 +53,16 @@ export default function QuickTaskModal({
   const [dueTime, setDueTime] = useState("23:59");
 
   if (!isOpen) return null;
+
+  // Format YYYY-MM-DD to DD/MM/YY
+  const formatToDDMMYY = (dateStr: string) => {
+    if (!dateStr) return "";
+    const parts = dateStr.split("-");
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0].slice(-2)}`;
+    }
+    return dateStr;
+  };
 
   // Calculate dynamic H-X label based on selected date
   const calculateDeadlineLabel = (dateStr: string) => {
@@ -85,9 +96,10 @@ export default function QuickTaskModal({
       title: title.trim(),
       course: finalCourse,
       difficulty,
+      taskType,
       deadlineLabel: label.split(" ")[0],
       deadlineDate: formattedDate,
-      weight: "Tugas Kuliah",
+      weight: taskType === "ulangan" ? "Ujian Semester" : taskType === "kuis" ? "Kuis Mingguan" : "Tugas Kuliah",
       completed: false,
       priority: difficulty === "sulit" ? "high" : difficulty === "sedang" ? "medium" : "low",
     };
@@ -135,6 +147,48 @@ export default function QuickTaskModal({
               required
               className="w-full px-4 py-2.5 rounded-2xl bg-m3-surface-container border border-m3-outline text-sm text-m3-on-surface placeholder:text-m3-secondary focus:outline-none focus:ring-2 focus:ring-m3-primary"
             />
+          </div>
+
+          {/* Tipe Agenda: Tugas, Ulangan, Kuis */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-m3-on-surface">
+              Tipe Agenda
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                type="button"
+                onClick={() => setTaskType("tugas")}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  taskType === "tugas"
+                    ? "bg-amber-100 text-amber-900 border-amber-400 shadow-2xs"
+                    : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
+                }`}
+              >
+                <span>📝 Tugas</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTaskType("ulangan")}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  taskType === "ulangan"
+                    ? "bg-rose-100 text-rose-900 border-rose-400 shadow-2xs"
+                    : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
+                }`}
+              >
+                <span>🎯 Ulangan</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTaskType("kuis")}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  taskType === "kuis"
+                    ? "bg-purple-100 text-purple-900 border-purple-400 shadow-2xs"
+                    : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
+                }`}
+              >
+                <span>⚡ Kuis</span>
+              </button>
+            </div>
           </div>
 
           {/* Mata Kuliah & Tingkat Kesulitan (Mudah, Sedang, Sulit) */}
@@ -209,8 +263,8 @@ export default function QuickTaskModal({
                 <Calendar className="w-3.5 h-3.5 text-m3-secondary" />
                 <span>Kapan Tenggatnya? (Deadline)</span>
               </span>
-              <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-m3-primary-container text-m3-on-primary-container">
-                {calculateDeadlineLabel(dueDate)}
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-m3-primary-container text-m3-on-primary-container">
+                {formatToDDMMYY(dueDate)} • {calculateDeadlineLabel(dueDate)}
               </span>
             </div>
 

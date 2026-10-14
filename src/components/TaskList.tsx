@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { CheckCircle2, Calendar, Trash2, Plus, Edit3, X, Save } from "lucide-react";
+import { CheckCircle2, Calendar, Trash2, Plus, Edit3, X, Save, BookOpen } from "lucide-react";
 import { TaskItem } from "./ActionDeck";
 
 interface TaskListProps {
@@ -10,6 +10,7 @@ interface TaskListProps {
   onDeleteTask?: (id: string) => void;
   onUpdateTask?: (id: string, updated: Partial<TaskItem>) => void;
   onOpenQuickTask?: () => void;
+  onOpenCourseMaterial?: (courseName: string) => void;
 }
 
 export default function TaskList({
@@ -18,8 +19,20 @@ export default function TaskList({
   onDeleteTask,
   onUpdateTask,
   onOpenQuickTask,
+  onOpenCourseMaterial,
 }: TaskListProps) {
   const [filter, setFilter] = useState<"all" | "pending" | "completed">("all");
+
+  const formatDeadlineDateToDDMMYY = (str: string) => {
+    if (!str) return "";
+    const match = str.match(/^(\d{4})-(\d{2})-(\d{2})(.*)/);
+    if (match) {
+      const [, yyyy, mm, dd, rest] = match;
+      const yy = yyyy.slice(-2);
+      return `${dd}/${mm}/${yy}${rest}`;
+    }
+    return str;
+  };
 
   // Edit Task Modal State
   const [editingTask, setEditingTask] = useState<TaskItem | null>(null);
@@ -82,11 +95,11 @@ export default function TaskList({
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div>
-          <h3 className="text-base font-bold text-m3-on-surface">Tenggat Tugas</h3>
+          <h3 className="text-base font-bold text-m3-on-surface">Tugas, Ulangan & Kuis</h3>
           <p className="text-xs text-m3-secondary">
             {pendingCount > 0
-              ? `${pendingCount} tugas aktif menunggu diselesaikan`
-              : "Semua tugas telah diselesaikan"}
+              ? `${pendingCount} agenda aktif menunggu diselesaikan`
+              : "Semua agenda telah diselesaikan"}
           </p>
         </div>
 
@@ -182,12 +195,43 @@ export default function TaskList({
 
                   {/* Task Content */}
                   <div className="flex-1 min-w-0 space-y-1.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-semibold text-m3-secondary truncate">
-                        {task.course}
-                      </span>
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-[11px] font-semibold text-m3-secondary truncate">
+                          {task.course}
+                        </span>
+                        {onOpenCourseMaterial && task.course && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onOpenCourseMaterial(task.course);
+                            }}
+                            className="inline-flex items-center gap-1 text-[9px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-full border border-indigo-200 transition-colors cursor-pointer"
+                            title={`Buka RPS & Materi kuliah ${task.course}`}
+                          >
+                            <BookOpen className="w-2.5 h-2.5 text-indigo-600" />
+                            <span>Materi / RPS</span>
+                          </button>
+                        )}
+                      </div>
 
                       <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {/* Task Type Badge: Tugas / Ulangan / Kuis */}
+                        {task.taskType && (
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+                              task.taskType === "ulangan"
+                                ? "bg-rose-100 text-rose-800 border border-rose-300"
+                                : task.taskType === "kuis"
+                                ? "bg-purple-100 text-purple-800 border border-purple-300"
+                                : "bg-amber-100 text-amber-800 border border-amber-300"
+                            }`}
+                          >
+                            {task.taskType === "ulangan" ? "🎯 Ulangan" : task.taskType === "kuis" ? "⚡ Kuis" : "📝 Tugas"}
+                          </span>
+                        )}
+
                         {/* Difficulty Badge: Mudah / Sedang / Sulit */}
                         {task.difficulty && (
                           <span
@@ -231,7 +275,7 @@ export default function TaskList({
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-m3-secondary pt-0.5">
                       <span className="flex items-center gap-1.5">
                         <Calendar className="w-3 h-3 text-m3-secondary" />
-                        <span>{task.deadlineDate}</span>
+                        <span>{formatDeadlineDateToDDMMYY(task.deadlineDate)}</span>
                       </span>
 
                       <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">

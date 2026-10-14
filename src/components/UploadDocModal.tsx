@@ -63,21 +63,75 @@ export default function UploadDocModal({
     setAnalysisFeedback(null);
     setTimeout(() => {
       const lower = selectedFile.name.toLowerCase();
-      // Match course
-      const matched = courses.find((c) => lower.includes(c.toLowerCase()));
-      if (matched) {
-        setSelectedCourse(matched);
-        setIsCustomCourse(false);
-        setAnalysisFeedback({
-          type: "success",
-          message: `AI Berhasil mendeteksi mata kuliah: "${matched}".`,
-        });
-      } else {
-        setAnalysisFeedback({
-          type: "warning",
-          message: "AI tidak menemukan nama mata kuliah yang cocok pada berkas ini. Silakan pilih mata kuliah secara manual pada daftar di bawah.",
-        });
+      
+      // 1. Direct match with registered courses
+      let matched = courses.find((c) => lower.includes(c.toLowerCase()) || c.toLowerCase().includes(lower));
+
+      // 2. Heuristic speculation from academic keywords
+      if (!matched) {
+        const keywordMap: Record<string, string> = {
+          metnum: "Metode Numerik",
+          numerik: "Metode Numerik",
+          strukdat: "Struktur Data",
+          struktur: "Struktur Data",
+          basdat: "Basis Data",
+          database: "Basis Data",
+          sql: "Basis Data",
+          jarkom: "Jaringan Komputer",
+          jaringan: "Jaringan Komputer",
+          network: "Jaringan Komputer",
+          os: "Sistem Operasi",
+          operasi: "Sistem Operasi",
+          rpl: "Rekayasa Perangkat Lunak",
+          software: "Rekayasa Perangkat Lunak",
+          ai: "Kecerdasan Buatan",
+          buatan: "Kecerdasan Buatan",
+          pbo: "Pemrograman Berorientasi Objek",
+          oop: "Pemrograman Berorientasi Objek",
+          kalkulus: "Kalkulus",
+          aljabar: "Aljabar Linear",
+          algoritma: "Algoritma & Pemrograman",
+          algo: "Algoritma & Pemrograman",
+          daspro: "Dasar Pemrograman",
+          ui: "Desain UI/UX",
+          ux: "Desain UI/UX",
+          etika: "Etika Profesi",
+        };
+
+        for (const [kw, courseName] of Object.entries(keywordMap)) {
+          if (lower.includes(kw)) {
+            // Check if user has a registered course close to this name
+            const existingSimilar = courses.find((c) => c.toLowerCase().includes(kw) || c.toLowerCase().includes(courseName.toLowerCase()));
+            matched = existingSimilar || courseName;
+            break;
+          }
+        }
       }
+
+      // 3. Fallback speculation: Pick first available course or cleaned title segment
+      if (!matched) {
+        if (courses.length > 0) {
+          matched = courses[0];
+        } else {
+          // Speculate from filename words
+          const cleanWords = selectedFile.name
+            .replace(/\.[^/.]+$/, "")
+            .replace(/^[0-9._\- ]+/, "")
+            .split(/[_-]/)[0];
+          matched = cleanWords.trim() || "Mata Kuliah Umum";
+        }
+      }
+
+      setSelectedCourse(matched);
+      setIsCustomCourse(!courses.includes(matched));
+      if (!courses.includes(matched)) {
+        setCustomCourseName(matched);
+      }
+      setAnalysisFeedback({
+        type: "success",
+        message: `AI berspekulasi mata kuliah: "${matched}" (dapat Anda ganti jika kurang sesuai).`,
+      });
+
       // Match docType
       if (lower.includes("rps") || lower.includes("silabus") || lower.includes("kurikulum")) {
         setDocType("rps");
@@ -92,6 +146,7 @@ export default function UploadDocModal({
         setDocType("praktikum");
         setSessionNo(1);
       }
+
       // Topic
       const cleanTopic = selectedFile.name
         .replace(/\.[^/.]+$/, "")
@@ -475,7 +530,7 @@ export default function UploadDocModal({
                     className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                   >
                     <option value="all">Umum / Seluruh Semester</option>
-                    {Array.from({ length: 14 }, (_, i) => i + 1).map((n) => (
+                    {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>
                         Pertemuan Sesi {n}
                       </option>

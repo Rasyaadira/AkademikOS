@@ -6,7 +6,7 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get("userId") || DEFAULT_USER_ID;
 
-    const tasks = db.prepare("SELECT * FROM tasks WHERE user_id = ? OR user_id = 'user-me' ORDER BY created_at DESC").all(userId);
+    const tasks = db.prepare("SELECT * FROM tasks WHERE user_id = ? ORDER BY created_at DESC").all(userId);
     const formatted = tasks.map((t: any) => ({
       id: t.id,
       userId: t.user_id,

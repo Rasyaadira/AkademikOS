@@ -615,8 +615,8 @@ export default function OtherViews({
 
       {/* TAB KALENDER & AGENDA: SPLIT VIEW WITH SCHEDULE & TASK LIST */}
       {activeTab === "kalender" && (
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch min-h-[720px]">
-          <div className="lg:col-span-8 flex flex-col h-[720px]">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch min-h-[640px]">
+          <div className="lg:col-span-8 flex flex-col min-h-[640px]">
             <ScheduleCalendar
               schedules={schedules}
               tasks={tasks}
@@ -630,7 +630,7 @@ export default function OtherViews({
             />
           </div>
 
-          <div className="lg:col-span-4 flex flex-col h-[720px]">
+          <div className="lg:col-span-4 flex flex-col min-h-[640px]">
             <TaskList
               tasks={tasks}
               onToggleTask={onToggleTask || (() => {})}
@@ -1256,8 +1256,6 @@ export default function OtherViews({
                     </span>
                   </div>
                   <div className="flex items-center gap-3 text-m3-secondary text-[11px]">
-                    <span>Lokasi: {getDocFileUrl(currentDoc)}</span>
-                    <span>•</span>
                     <span>Diperbarui: {currentDoc.updated}</span>
                   </div>
                 </div>

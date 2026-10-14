@@ -78,7 +78,7 @@ export default function TaskList({
   };
 
   return (
-    <div className="bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs max-h-[640px] h-full flex flex-col relative">
+    <div className="bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs flex-1 h-full min-h-[620px] flex flex-col relative">
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div>

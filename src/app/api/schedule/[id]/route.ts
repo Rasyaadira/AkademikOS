@@ -19,6 +19,8 @@ export async function PATCH(
       day,
       attendanceStatus,
       classType,
+      specificDate,
+      excludedDates,
     } = body;
 
     const current = db.prepare("SELECT * FROM schedule WHERE id = ?").get(id) as any;
@@ -36,10 +38,14 @@ export async function PATCH(
     const nextDay = day !== undefined ? day : current.day;
     const nextAttendance = attendanceStatus !== undefined ? attendanceStatus : current.attendance_status;
     const nextClassType = classType !== undefined ? classType : (current.class_type || "reguler");
+    const nextSpecificDate = specificDate !== undefined ? specificDate : current.specific_date;
+    const nextExcludedDates = excludedDates !== undefined
+      ? (Array.isArray(excludedDates) ? JSON.stringify(excludedDates) : excludedDates)
+      : (current.excluded_dates || "[]");
 
     db.prepare(`
       UPDATE schedule
-      SET course = ?, room = ?, lecturer = ?, start_hour = ?, duration_hours = ?, start_time = ?, end_time = ?, day = ?, attendance_status = ?, class_type = ?
+      SET course = ?, room = ?, lecturer = ?, start_hour = ?, duration_hours = ?, start_time = ?, end_time = ?, day = ?, attendance_status = ?, class_type = ?, specific_date = ?, excluded_dates = ?
       WHERE id = ?
     `).run(
       nextCourse,
@@ -52,6 +58,8 @@ export async function PATCH(
       nextDay,
       nextAttendance,
       nextClassType,
+      nextSpecificDate,
+      nextExcludedDates,
       id
     );
 

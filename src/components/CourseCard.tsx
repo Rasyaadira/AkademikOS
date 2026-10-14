@@ -205,7 +205,7 @@ export default function CourseCard({
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-high text-m3-on-surface text-xs font-semibold border border-m3-outline-variant transition-all hover:scale-[1.02]"
         >
           <BookOpen className="w-3.5 h-3.5 text-m3-secondary" />
-          <span>Lihat Silabus & RPS</span>
+          <span>Lihat Materi</span>
         </button>
 
         {/* Attendance Dropdown (Hadir, Izin, Sakit, Alpa) */}

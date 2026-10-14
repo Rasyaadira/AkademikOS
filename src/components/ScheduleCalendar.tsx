@@ -19,6 +19,8 @@ import {
   Sparkles,
   Camera,
   Loader2,
+  ZoomOut,
+  AlertCircle,
 } from "lucide-react";
 import { TaskItem } from "./ActionDeck";
 import ImportScheduleModal from "./ImportScheduleModal";
@@ -40,6 +42,8 @@ export interface ScheduleItem {
   status: "completed" | "active" | "upcoming";
   attendanceStatus?: string;
   classType?: "reguler" | "pindahan";
+  specificDate?: string;
+  excludedDates?: string[];
   color?: string;
   time?: string;
 }
@@ -287,13 +291,38 @@ export default function ScheduleCalendar({
   };
 
   const handleJumpToToday = () => {
-    const today = new Date(2026, 9, 1);
+    const today = new Date();
     setCurrentDate(today);
+    const dayKey = weekdayToKey[today.getDay()] || "senin";
     if (propOnSelectDay) {
-      propOnSelectDay("kamis");
+      propOnSelectDay(dayKey);
     } else {
-      setInternalDay("kamis");
+      setInternalDay(dayKey);
     }
+  };
+
+  // State for date-context when editing / deleting a single occurrence
+  const [editingDateContext, setEditingDateContext] = useState<string>("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isZoomFit, setIsZoomFit] = useState(false);
+
+  // Dynamic filter for schedules on a specific date (handling recurring vs single instance vs exclusions)
+  const getSchedulesForDate = (dateStr: string, dayKey: string): ScheduleItem[] => {
+    if (!filterCourses) return [];
+    return schedules.filter((s) => {
+      // 1. Single-instance schedule with specific date
+      if (s.specificDate) {
+        return s.specificDate === dateStr;
+      }
+      // 2. Regular recurring weekly schedule
+      if (s.day.toLowerCase() === dayKey.toLowerCase()) {
+        if (s.excludedDates && s.excludedDates.includes(dateStr)) {
+          return false;
+        }
+        return true;
+      }
+      return false;
+    });
   };
 
   // Check if current view is looking at today
@@ -350,20 +379,44 @@ export default function ScheduleCalendar({
     setDraggedItemId(null);
   };
 
-  // Click to open edit popover/modal
-  const handleCardClick = (e: React.MouseEvent, item: ScheduleItem) => {
+  // Click to open edit popover/modal with date context
+  const handleCardClick = (e: React.MouseEvent, item: ScheduleItem, targetDateStr?: string) => {
     if (draggedItemId) return;
     setEditingItem({ ...item });
+    setEditingDateContext(targetDateStr || "");
+    setShowDeleteConfirm(false);
   };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingItem) return;
 
-    if (onUpdateSchedule) {
-      onUpdateSchedule(editingItem.id, editingItem);
+    // Jika pengguna mengubah jadwal rutin menjadi pindahan dosen pada tanggal spesifik
+    if (editingDateContext && !editingItem.specificDate && editingItem.classType === "pindahan") {
+      // 1. Kecualikan tanggal ini dari jadwal rutin mingguan
+      const nextExcluded = Array.from(new Set([...(editingItem.excludedDates || []), editingDateContext]));
+      if (onUpdateSchedule) {
+        onUpdateSchedule(editingItem.id, { excludedDates: nextExcluded });
+      }
+
+      // 2. Buat jadwal baru berstatus 'pindahan' khusus untuk tanggal ini
+      const newPindahan: ScheduleItem = {
+        ...editingItem,
+        id: `sch-pindahan-${Date.now()}`,
+        specificDate: editingDateContext,
+        classType: "pindahan",
+      };
+      if (onAddSchedule) {
+        onAddSchedule(newPindahan);
+      }
+    } else {
+      if (onUpdateSchedule) {
+        onUpdateSchedule(editingItem.id, editingItem);
+      }
     }
+
     setEditingItem(null);
+    setShowDeleteConfirm(false);
   };
 
   const handleDeleteSchedule = (id: string) => {
@@ -371,6 +424,17 @@ export default function ScheduleCalendar({
       onDeleteSchedule(id);
     }
     setEditingItem(null);
+    setShowDeleteConfirm(false);
+  };
+
+  const handleDeleteOnlyThisDate = (id: string, dateStr: string) => {
+    if (!editingItem) return;
+    const nextExcluded = Array.from(new Set([...(editingItem.excludedDates || []), dateStr]));
+    if (onUpdateSchedule) {
+      onUpdateSchedule(id, { excludedDates: nextExcluded });
+    }
+    setEditingItem(null);
+    setShowDeleteConfirm(false);
   };
 
   const handleSaveNewSchedule = (e: React.FormEvent) => {
@@ -407,14 +471,13 @@ export default function ScheduleCalendar({
   // 24 Hours array for 7-day matrix view (00.00 - 23.00 WIB)
   const matrixHours = Array.from({ length: 24 }, (_, i) => i);
 
-  // Filter schedules for the selected day in 1-day view
-  const daySchedules = schedules.filter((s) => s.day === selectedDay);
+  // Active date string for 1-day view
+  const current1DayDateStr = activeDayObj?.dateStr || dayKeyToDateStr[selectedDay] || "";
+  const daySchedules = getSchedulesForDate(current1DayDateStr, selectedDay);
 
   return (
     <div
-      className={`bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs flex flex-col relative ${
-        isExpanded ? "min-h-[720px] flex-1" : "max-h-[640px] h-full"
-      }`}
+      className="bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs flex flex-col relative flex-1 h-full min-h-[620px]"
     >
       {/* Top Header: Controls with Prev/Next Navigation (Tombol Kanan Kiri) + View Mode */}
       <div className="flex flex-col gap-3 flex-shrink-0">
@@ -423,38 +486,56 @@ export default function ScheduleCalendar({
             <h3 className="text-lg font-bold text-m3-on-surface">Jadwal Perkuliahan</h3>
           </div>
 
-          {/* View Mode Pills (1 Hari, 7 Hari, 1 Bulan) */}
-          <div className="flex items-center gap-1 bg-m3-surface-container p-1 rounded-full border border-m3-outline-variant self-start sm:self-auto">
-            <button
-              onClick={() => setViewMode("1hari")}
-              className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                viewMode === "1hari"
-                  ? "bg-m3-primary text-m3-on-primary shadow-xs"
-                  : "text-m3-secondary hover:text-m3-on-surface"
-              }`}
-            >
-              1 Hari
-            </button>
-            <button
-              onClick={() => setViewMode("7hari")}
-              className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                viewMode === "7hari"
-                  ? "bg-m3-primary text-m3-on-primary shadow-xs"
-                  : "text-m3-secondary hover:text-m3-on-surface"
-              }`}
-            >
-              7 Hari
-            </button>
-            <button
-              onClick={() => setViewMode("1bulan")}
-              className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all ${
-                viewMode === "1bulan"
-                  ? "bg-m3-primary text-m3-on-primary shadow-xs"
-                  : "text-m3-secondary hover:text-m3-on-surface"
-              }`}
-            >
-              1 Bulan
-            </button>
+          {/* View Mode Pills (1 Hari, 7 Hari, 1 Bulan) + Zoom Fit */}
+          <div className="flex items-center gap-2 flex-wrap self-start sm:self-auto">
+            <div className="flex items-center gap-1 bg-m3-surface-container p-1 rounded-full border border-m3-outline-variant">
+              <button
+                onClick={() => setViewMode("1hari")}
+                className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "1hari"
+                    ? "bg-m3-primary text-m3-on-primary shadow-xs"
+                    : "text-m3-secondary hover:text-m3-on-surface"
+                }`}
+              >
+                1 Hari
+              </button>
+              <button
+                onClick={() => setViewMode("7hari")}
+                className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "7hari"
+                    ? "bg-m3-primary text-m3-on-primary shadow-xs"
+                    : "text-m3-secondary hover:text-m3-on-surface"
+                }`}
+              >
+                7 Hari
+              </button>
+              <button
+                onClick={() => setViewMode("1bulan")}
+                className={`px-3.5 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  viewMode === "1bulan"
+                    ? "bg-m3-primary text-m3-on-primary shadow-xs"
+                    : "text-m3-secondary hover:text-m3-on-surface"
+                }`}
+              >
+                1 Bulan
+              </button>
+            </div>
+
+            {(viewMode === "1hari" || viewMode === "7hari") && (
+              <button
+                type="button"
+                onClick={() => setIsZoomFit(!isZoomFit)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
+                  isZoomFit
+                    ? "bg-indigo-600 text-white border-indigo-600 shadow-xs"
+                    : "bg-m3-surface-container text-m3-secondary hover:text-m3-on-surface border-m3-outline-variant"
+                }`}
+                title={isZoomFit ? "Kembali ke tampilan standar" : "Muat 24 jam tanpa scroll (Zoom Fit)"}
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+                <span>{isZoomFit ? "Normal" : "Zoom Fit"}</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -605,11 +686,11 @@ export default function ScheduleCalendar({
                 setPhotoError("");
                 setIsAddScheduleOpen(true);
               }}
-              className="flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs"
+              className="flex items-center gap-1 text-[11px] font-bold px-3 py-1 rounded-full bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs cursor-pointer"
               title="Tambah Jadwal Perkuliahan Baru"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Tambah Matkul</span>
+              <span>Tambah Jadwal</span>
             </button>
           </div>
         </div>
@@ -675,15 +756,15 @@ export default function ScheduleCalendar({
                   onDrop={(e) => handleCellDrop(e, selectedDay, hour)}
                   className={`flex items-start gap-2.5 px-2.5 transition-all border-b border-black/[0.03] ${
                     isOver
-                      ? "border-2 border-dashed border-m3-primary bg-m3-primary-container/30 min-h-[44px] py-1.5 rounded-xl"
+                      ? "border-2 border-dashed border-m3-primary bg-m3-primary-container/30 min-h-[36px] py-1 rounded-xl"
                       : hasItems
-                      ? "border-m3-outline-variant/60 bg-white min-h-[44px] py-1.5 shadow-xs rounded-xl"
-                      : "hover:bg-white/60 min-h-[26px] py-0.5"
+                      ? `border-m3-outline-variant/60 bg-white shadow-xs rounded-xl ${isZoomFit ? "min-h-[26px] py-0.5" : "min-h-[44px] py-1.5"}`
+                      : `hover:bg-white/60 ${isZoomFit ? "min-h-[19px] py-0" : "min-h-[26px] py-0.5"}`
                   }`}
                 >
                   <div
                     className={`w-10 text-[10px] font-bold text-m3-secondary flex-shrink-0 text-right ${
-                      hasItems ? "pt-1" : "pt-0.5"
+                      hasItems ? (isZoomFit ? "pt-0.5" : "pt-1") : "pt-0.5"
                     }`}
                   >
                     {hourLabel}
@@ -695,8 +776,10 @@ export default function ScheduleCalendar({
                         key={item.id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, item.id)}
-                        onClick={(e) => handleCardClick(e, item)}
-                        className={`p-2 rounded-xl border flex items-center justify-between gap-2.5 cursor-pointer active:cursor-grabbing transition-all hover:shadow-xs group ${
+                        onClick={(e) => handleCardClick(e, item, current1DayDateStr)}
+                        className={`rounded-xl border flex items-center justify-between gap-2.5 cursor-pointer active:cursor-grabbing transition-all hover:shadow-xs group ${
+                          isZoomFit ? "p-1 px-2 text-[10px]" : "p-2 text-xs"
+                        } ${
                           item.status === "active"
                             ? "bg-m3-primary-container border-m3-primary"
                             : "bg-m3-surface-container border-m3-outline-variant hover:border-m3-secondary"
@@ -704,29 +787,33 @@ export default function ScheduleCalendar({
                         title="Klik untuk mengedit detail kelas"
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <GripVertical className="w-3.5 h-3.5 text-m3-secondary flex-shrink-0 opacity-60 group-hover:opacity-100" />
+                          {!isZoomFit && (
+                            <GripVertical className="w-3.5 h-3.5 text-m3-secondary flex-shrink-0 opacity-60 group-hover:opacity-100" />
+                          )}
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-xs font-bold text-m3-on-surface truncate">
+                              <span className="font-bold text-m3-on-surface truncate">
                                 {item.course}
                               </span>
                               {item.classType === "pindahan" && (
-                                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300 flex-shrink-0">
+                                <span className="text-[8px] font-bold px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-900 border border-amber-300 flex-shrink-0">
                                   Pindahan Dosen
                                 </span>
                               )}
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-m3-surface-container-low text-m3-secondary">
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-m3-surface-container-low text-m3-secondary">
                                 {item.startTime} - {item.endTime} WIB
                               </span>
                             </div>
-                            <p className="text-[10px] text-m3-secondary truncate">
-                              {item.room || "-"} • {item.lecturer || "-"}
-                            </p>
+                            {!isZoomFit && (
+                              <p className="text-[10px] text-m3-secondary truncate">
+                                {item.room || "-"} • {item.lecturer || "-"}
+                              </p>
+                            )}
                           </div>
                         </div>
 
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-[10px] font-semibold text-m3-secondary bg-m3-surface-container-low px-2 py-0.5 rounded-md flex items-center gap-1 group-hover:text-m3-primary transition-colors">
+                          <span className="text-[9px] font-semibold text-m3-secondary bg-m3-surface-container-low px-2 py-0.5 rounded-md flex items-center gap-1 group-hover:text-m3-primary transition-colors">
                             <Edit3 className="w-3 h-3" />
                             <span>Edit</span>
                           </span>
@@ -737,16 +824,18 @@ export default function ScheduleCalendar({
                     {matchedTasks.map((t) => (
                       <div
                         key={t.id}
-                        className="p-1.5 px-2.5 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 flex items-center justify-between gap-2 text-xs"
+                        className={`rounded-xl border border-amber-300 bg-amber-50 text-amber-900 flex items-center justify-between gap-2 ${
+                          isZoomFit ? "p-1 px-2 text-[10px]" : "p-1.5 px-2.5 text-xs"
+                        }`}
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-200 text-amber-900 flex-shrink-0">
+                          <span className="text-[8px] font-bold px-1.5 py-0.2 rounded bg-amber-200 text-amber-900 flex-shrink-0">
                             Tenggat Tugas
                           </span>
                           <span className="font-bold truncate">{t.title}</span>
                           <span className="text-[10px] text-amber-700 truncate">({t.course})</span>
                         </div>
-                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-white border border-amber-200 flex-shrink-0">
+                        <span className="text-[9px] font-semibold px-2 py-0.2 rounded-full bg-white border border-amber-200 flex-shrink-0">
                           {t.difficulty || "Sedang"} • {t.deadlineLabel || "23:59"}
                         </span>
                       </div>
@@ -852,24 +941,31 @@ export default function ScheduleCalendar({
                 </div>
               )}
 
-              {/* ROWS: JAM DI SAMPING KIRI (06.00 s.d. 22.00 - COMPACT ROW MIN-H-38PX) */}
+              {/* ROWS: JAM DI SAMPING KIRI (00.00 s.d. 23.00 - DENSITY ADJUSTABLE VIA ZOOM FIT) */}
               {matrixHours.map((hour) => {
                 const hourLabel = `${String(hour).padStart(2, "0")}.00`;
 
                 return (
                   <div
                     key={hour}
-                    className="flex border-b border-black/[0.03] min-h-[38px] hover:bg-slate-50/40 transition-colors"
+                    className={`flex border-b border-black/[0.03] hover:bg-slate-50/40 transition-colors ${
+                      isZoomFit ? "min-h-[20px]" : "min-h-[38px]"
+                    }`}
                   >
                     {/* Sticky Jam di Samping */}
-                    <div className="w-16 p-1 border-r border-black/[0.03] flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-m3-secondary bg-m3-surface-container/20">
+                    <div
+                      className={`w-14 sm:w-16 p-0.5 border-r border-black/[0.03] flex-shrink-0 flex items-center justify-center font-bold text-m3-secondary bg-m3-surface-container/20 ${
+                        isZoomFit ? "text-[8px]" : "text-[10px]"
+                      }`}
+                    >
                       {hourLabel}
                     </div>
 
                     {/* 7 Sel Hari untuk Jam Ini */}
                     {daysList.map((d) => {
+                      const classesForDay = getSchedulesForDate(d.dateStr, d.key);
                       const classInCell = filterCourses
-                        ? schedules.find((s) => s.day === d.key && s.startHour === hour)
+                        ? classesForDay.find((s) => s.startHour === hour)
                         : null;
                       const tasksInCell = filterTasks
                         ? tasks.filter((t) => {
@@ -897,22 +993,28 @@ export default function ScheduleCalendar({
                             <div
                               draggable
                               onDragStart={(e) => handleDragStart(e, classInCell.id)}
-                              onClick={(e) => handleCardClick(e, classInCell)}
-                              className={`w-full p-1 rounded-lg text-[9px] font-bold shadow-xs cursor-pointer active:cursor-grabbing hover:brightness-95 flex flex-col justify-between border transition-all ${badgeColor}`}
+                              onClick={(e) => handleCardClick(e, classInCell, d.dateStr)}
+                              className={`w-full rounded text-[8px] font-bold shadow-2xs cursor-pointer active:cursor-grabbing hover:brightness-95 flex border transition-all ${
+                                isZoomFit
+                                  ? "p-0.5 px-1 items-center justify-between leading-none"
+                                  : "p-1 text-[9px] flex-col justify-between"
+                              } ${badgeColor}`}
                               title={`${classInCell.course} (${classInCell.startTime}-${classInCell.endTime}) - Klik untuk edit`}
                             >
-                              <div className="flex items-center justify-between gap-0.5">
+                              <div className="flex items-center justify-between gap-0.5 w-full">
                                 <span className="truncate leading-tight font-extrabold">{classInCell.course}</span>
                                 {classInCell.classType === "pindahan" && (
                                   <span className="text-[7px] px-1 py-0.2 rounded bg-amber-600 text-white font-bold flex-shrink-0">
-                                    Pindahan
+                                    {isZoomFit ? "P" : "Pindahan"}
                                   </span>
                                 )}
                               </div>
-                              <div className="flex items-center justify-between text-[8px] opacity-80 pt-0.5">
-                                <span>{classInCell.room ? classInCell.room.split("-")[0] : "-"}</span>
-                                <span>{classInCell.startTime}</span>
-                              </div>
+                              {!isZoomFit && (
+                                <div className="flex items-center justify-between text-[8px] opacity-80 pt-0.5">
+                                  <span>{classInCell.room ? classInCell.room.split("-")[0] : "-"}</span>
+                                  <span>{classInCell.startTime}</span>
+                                </div>
+                              )}
                             </div>
                           )}
 
@@ -1000,8 +1102,8 @@ export default function ScheduleCalendar({
                     const dayIndex = jsDate.getDay();
                     const dayKey = weekdayToKey[dayIndex];
 
-                    const dayClasses = filterCourses ? schedules.filter((s) => s.day === dayKey) : [];
                     const datePadded = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(date).padStart(2, "0")}`;
+                    const dayClasses = filterCourses ? getSchedulesForDate(datePadded, dayKey) : [];
                     const dayTasks = filterTasks
                       ? tasks.filter((t) => t.deadlineDate.startsWith(datePadded) || t.deadlineDate.toLowerCase().includes(datePadded))
                       : [];
@@ -1039,7 +1141,7 @@ export default function ScheduleCalendar({
                                 key={cl.id}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleCardClick(e, cl);
+                                  handleCardClick(e, cl, datePadded);
                                 }}
                                 className={`px-1.5 py-0.5 rounded text-[9px] font-bold truncate border transition-colors flex items-center justify-between gap-1 ${
                                   cl.classType === "pindahan"
@@ -1236,31 +1338,74 @@ export default function ScheduleCalendar({
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-m3-outline-variant/60 flex items-center justify-between gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleDeleteSchedule(editingItem.id)}
-                  className="px-3.5 py-1.5 rounded-full text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors flex items-center gap-1.5"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Hapus Jadwal</span>
-                </button>
-                <div className="flex items-center gap-2">
+              {showDeleteConfirm ? (
+                <div className="pt-3 border-t border-rose-200 bg-rose-50/80 p-3.5 rounded-2xl space-y-2.5 animate-in fade-in">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-rose-800">
+                    <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0" />
+                    <span>Konfirmasi Penghapusan Jadwal</span>
+                  </div>
+                  <p className="text-[11px] text-rose-700 leading-relaxed">
+                    Pilih cakupan jadwal yang ingin Anda hapus:
+                  </p>
+                  <div className="flex flex-col gap-2 pt-1">
+                    {editingDateContext && !editingItem.specificDate && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteOnlyThisDate(editingItem.id, editingDateContext)}
+                        className="w-full py-2 px-3 rounded-xl bg-white hover:bg-rose-100/80 text-rose-700 border border-rose-300 text-xs font-bold text-left transition-colors flex items-center justify-between"
+                      >
+                        <span>🗑️ Hapus Hanya Pertemuan Ini</span>
+                        <span className="text-[10px] font-semibold text-rose-500">{editingDateContext}</span>
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteSchedule(editingItem.id)}
+                      className="w-full py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold text-left transition-colors flex items-center justify-between"
+                    >
+                      <span>
+                        {editingItem.specificDate
+                          ? "Hapus Jadwal Ini"
+                          : "Hapus Seluruh Jadwal Rutin (Semua Pekan)"}
+                      </span>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowDeleteConfirm(false)}
+                      className="w-full py-1.5 px-3 text-center text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors"
+                    >
+                      Batal
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="pt-3 border-t border-m3-outline-variant/60 flex items-center justify-between gap-2">
                   <button
                     type="button"
-                    onClick={() => setEditingItem(null)}
-                    className="px-4 py-2 rounded-full text-xs font-semibold text-m3-secondary hover:bg-m3-surface-container transition-colors"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    className="px-3.5 py-1.5 rounded-full text-xs font-bold text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors flex items-center gap-1.5 cursor-pointer"
                   >
-                    Batal
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Hapus Jadwal</span>
                   </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs"
-                  >
-                    Simpan Perubahan
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditingItem(null)}
+                      className="px-4 py-2 rounded-full text-xs font-semibold text-m3-secondary hover:bg-m3-surface-container transition-colors cursor-pointer"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs cursor-pointer"
+                    >
+                      Simpan Perubahan
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
             </form>
           </div>
         </div>
@@ -1491,7 +1636,7 @@ export default function ScheduleCalendar({
                   type="submit"
                   className="min-h-[44px] px-5 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs cursor-pointer"
                 >
-                  Simpan Mata Kuliah
+                  Simpan Jadwal
                 </button>
               </div>
             </form>

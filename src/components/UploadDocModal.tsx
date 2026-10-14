@@ -55,10 +55,12 @@ export default function UploadDocModal({
   const [topic, setTopic] = useState("");
   const [showEmptyCourseConfirm, setShowEmptyCourseConfirm] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisFeedback, setAnalysisFeedback] = useState<{ type: "success" | "warning"; message: string } | null>(null);
 
   const handleAutoAnalyzeAI = () => {
     if (!selectedFile) return;
     setIsAnalyzing(true);
+    setAnalysisFeedback(null);
     setTimeout(() => {
       const lower = selectedFile.name.toLowerCase();
       // Match course
@@ -66,6 +68,15 @@ export default function UploadDocModal({
       if (matched) {
         setSelectedCourse(matched);
         setIsCustomCourse(false);
+        setAnalysisFeedback({
+          type: "success",
+          message: `AI Berhasil mendeteksi mata kuliah: "${matched}".`,
+        });
+      } else {
+        setAnalysisFeedback({
+          type: "warning",
+          message: "AI tidak menemukan nama mata kuliah yang cocok pada berkas ini. Silakan pilih mata kuliah secara manual pada daftar di bawah.",
+        });
       }
       // Match docType
       if (lower.includes("rps") || lower.includes("silabus") || lower.includes("kurikulum")) {
@@ -196,6 +207,7 @@ export default function UploadDocModal({
     setCustomCourseName("");
     setSelectedCourse("");
     setShowEmptyCourseConfirm(false);
+    setAnalysisFeedback(null);
     setTopic("");
     onClose();
   };
@@ -327,6 +339,21 @@ export default function UploadDocModal({
                     <span className="font-medium">
                       AI sedang memindai isi dokumen dan mencocokkan dengan daftar mata kuliah Anda...
                     </span>
+                  </div>
+                ) : analysisFeedback ? (
+                  <div
+                    className={`p-2.5 rounded-xl text-xs flex items-start gap-2 border animate-in fade-in ${
+                      analysisFeedback.type === "success"
+                        ? "bg-emerald-50 text-emerald-900 border-emerald-300"
+                        : "bg-amber-50 text-amber-900 border-amber-300"
+                    }`}
+                  >
+                    {analysisFeedback.type === "success" ? (
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                    )}
+                    <span className="leading-relaxed font-medium">{analysisFeedback.message}</span>
                   </div>
                 ) : (
                   <p className="text-[11px] text-indigo-950/80 leading-relaxed">

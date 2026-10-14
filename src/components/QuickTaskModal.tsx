@@ -8,26 +8,40 @@ interface QuickTaskModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAddTask: (task: TaskItem) => void;
+  courses?: string[];
 }
-
-const courseOptions = [
-  "Kecerdasan Buatan & Sistem Pakar",
-  "Sistem Operasi",
-  "Rekayasa Perangkat Lunak",
-  "Basis Data Lanjut",
-  "Jaringan Komputer",
-  "Pemrograman Berorientasi Objek",
-  "Etika Profesi & Komunikasi",
-];
 
 export default function QuickTaskModal({
   isOpen,
   onClose,
   onAddTask,
+  courses = [],
 }: QuickTaskModalProps) {
+  const availableCourses = courses && courses.length > 0 ? courses : [
+    "Matematika Diskrit",
+    "Menggambar",
+    "Pengantar Multimedia",
+    "Bahasa Inggris untuk TIK",
+    "Pengantar Teknologi Informasi dan Komunikasi",
+    "Pengantar Desain Komunikasi Visual",
+    "Pendidikan Agama",
+    "Algoritma dan Pemrograman",
+    "Pancasila",
+  ];
+
   const [title, setTitle] = useState("");
-  const [course, setCourse] = useState(courseOptions[0]);
+  const [course, setCourse] = useState(availableCourses[0] || "Mata Kuliah Umum");
+  const [isCustomCourse, setIsCustomCourse] = useState(false);
+  const [customCourseName, setCustomCourseName] = useState("");
   const [difficulty, setDifficulty] = useState<"mudah" | "sedang" | "sulit">("sedang");
+
+  React.useEffect(() => {
+    if (availableCourses.length > 0 && !isCustomCourse) {
+      if (!course || !availableCourses.includes(course)) {
+        setCourse(availableCourses[0]);
+      }
+    }
+  }, [courses, isOpen]);
 
   // Default to tomorrow 23:59
   const tomorrow = new Date();
@@ -64,10 +78,12 @@ export default function QuickTaskModal({
     const label = calculateDeadlineLabel(dueDate);
     const formattedDate = `${dueDate} ${dueTime} WIB`;
 
+    const finalCourse = isCustomCourse ? (customCourseName.trim() || "Mata Kuliah Umum") : course;
+
     const newTask: TaskItem = {
       id: `task-${Date.now()}`,
       title: title.trim(),
-      course,
+      course: finalCourse,
       difficulty,
       deadlineLabel: label.split(" ")[0],
       deadlineDate: formattedDate,
@@ -78,6 +94,8 @@ export default function QuickTaskModal({
 
     onAddTask(newTask);
     setTitle("");
+    setIsCustomCourse(false);
+    setCustomCourseName("");
     onClose();
   };
 
@@ -122,20 +140,48 @@ export default function QuickTaskModal({
           {/* Mata Kuliah & Tingkat Kesulitan (Mudah, Sedang, Sulit) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-m3-on-surface">
-                Mata Kuliah
-              </label>
-              <select
-                value={course}
-                onChange={(e) => setCourse(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-2xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
-              >
-                {courseOptions.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-m3-on-surface">
+                  Mata Kuliah
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsCustomCourse(!isCustomCourse)}
+                  className="text-[10px] text-m3-primary hover:underline font-semibold"
+                >
+                  {isCustomCourse ? "Pilih dari Daftar" : "+ Ketik Manual"}
+                </button>
+              </div>
+
+              {isCustomCourse ? (
+                <input
+                  type="text"
+                  value={customCourseName}
+                  onChange={(e) => setCustomCourseName(e.target.value)}
+                  placeholder="Ketik nama mata kuliah..."
+                  required
+                  className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                />
+              ) : (
+                <select
+                  value={course}
+                  onChange={(e) => {
+                    if (e.target.value === "__custom__") {
+                      setIsCustomCourse(true);
+                    } else {
+                      setCourse(e.target.value);
+                    }
+                  }}
+                  className="w-full px-3 py-2.5 rounded-2xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
+                >
+                  {availableCourses.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                  <option value="__custom__">+ Ketik Mata Kuliah Lain...</option>
+                </select>
+              )}
             </div>
 
             {/* Tingkat Kesulitan: Mudah / Sedang / Sulit */}

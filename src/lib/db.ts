@@ -110,7 +110,9 @@ db.exec(`
     lecturer TEXT,
     status TEXT DEFAULT 'upcoming',
     attendance_status TEXT DEFAULT 'pending',
-    class_type TEXT DEFAULT 'reguler'
+    class_type TEXT DEFAULT 'reguler',
+    specific_date TEXT,
+    excluded_dates TEXT DEFAULT '[]'
   );
 
   -- 7. Task Management
@@ -206,10 +208,16 @@ try {
 try {
   const schedCols: any[] = db.prepare("PRAGMA table_info(schedule)").all();
   if (!schedCols.some((c) => c.name === "class_type")) {
-    db.exec("ALTER TABLE schedule ADD COLUMN class_type TEXT DEFAULT 'reguler';");
+    try { db.exec("ALTER TABLE schedule ADD COLUMN class_type TEXT DEFAULT 'reguler';"); } catch {}
+  }
+  if (!schedCols.some((c) => c.name === "specific_date")) {
+    try { db.exec("ALTER TABLE schedule ADD COLUMN specific_date TEXT;"); } catch {}
+  }
+  if (!schedCols.some((c) => c.name === "excluded_dates")) {
+    try { db.exec("ALTER TABLE schedule ADD COLUMN excluded_dates TEXT DEFAULT '[]';"); } catch {}
   }
 } catch (e) {
-  console.log("Migration check schedule:", e);
+  // Concurrent worker safety
 }
 
 // Clean initialization: Single personal student profile, zero mock tasks/schedules

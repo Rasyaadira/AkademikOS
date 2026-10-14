@@ -448,9 +448,9 @@ export default function HomeDashboard() {
               </div>
             </div>
 
-            {/* Row 2: Schedule Calendar (Col-8) & Task List (Col-4) Sejajar Max Height */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-              <div className="lg:col-span-8 h-[640px]">
+            {/* Row 2: Schedule Calendar (Col-8) & Task List (Col-4) Sejajar Min Height */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch min-h-[640px]">
+              <div className="lg:col-span-8 flex flex-col h-[640px]">
                 <ScheduleCalendar
                   schedules={schedules}
                   tasks={tasks}
@@ -463,12 +463,13 @@ export default function HomeDashboard() {
                 />
               </div>
 
-              <div className="lg:col-span-4 h-[640px]">
+              <div className="lg:col-span-4 flex flex-col h-[640px]">
                 <TaskList
                   tasks={tasks}
                   onToggleTask={handleToggleTask}
                   onDeleteTask={handleDeleteTask}
                   onUpdateTask={handleUpdateTask}
+                  onOpenQuickTask={() => setIsQuickTaskOpen(true)}
                 />
               </div>
             </div>
@@ -499,6 +500,7 @@ export default function HomeDashboard() {
         isOpen={isQuickTaskOpen}
         onClose={() => setIsQuickTaskOpen(false)}
         onAddTask={handleAddTask}
+        courses={Array.from(new Set(schedules.map((s) => s.course).filter(Boolean)))}
       />
 
       <UploadDocModal

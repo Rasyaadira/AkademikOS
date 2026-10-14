@@ -66,6 +66,10 @@ export default function Sidebar({
     .slice(0, 2)
     .toUpperCase() || "MA";
 
+  const filteredMainNavItems = profile?.noAiMode
+    ? mainNavItems.filter((item) => item.id !== "quiz")
+    : mainNavItems;
+
   return (
     <aside className="w-64 h-full bg-white rounded-[28px] sm:rounded-[32px] border border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between p-4 overflow-y-auto">
       {/* Brand Header */}
@@ -84,7 +88,7 @@ export default function Sidebar({
 
         {/* Main Navigation */}
         <nav className="space-y-1" aria-label="Menu Utama">
-          {mainNavItems.map((item) => {
+          {filteredMainNavItems.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (

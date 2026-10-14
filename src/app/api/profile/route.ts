@@ -24,6 +24,7 @@ export async function GET(req: Request) {
         targetGPA: "",
         maxSKS: 24,
         photoUrl: "",
+        noAiMode: false,
       });
     }
 
@@ -40,6 +41,7 @@ export async function GET(req: Request) {
       targetGPA: profile.target_gpa,
       maxSKS: profile.max_sks,
       photoUrl: profile.photo_url || "",
+      noAiMode: !!profile.no_ai_mode,
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -62,11 +64,12 @@ export async function PUT(req: Request) {
       targetGPA = "",
       maxSKS = 24,
       photoUrl = "",
+      noAiMode = false,
     } = body;
 
     db.prepare(`
-      INSERT OR REPLACE INTO profile (user_id, name, nim, email, major, faculty, university, semester, academic_advisor, target_gpa, max_sks, photo_url)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO profile (user_id, name, nim, email, major, faculty, university, semester, academic_advisor, target_gpa, max_sks, photo_url, no_ai_mode)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       name,
@@ -79,7 +82,8 @@ export async function PUT(req: Request) {
       academicAdvisor,
       targetGPA,
       maxSKS,
-      photoUrl
+      photoUrl,
+      noAiMode ? 1 : 0
     );
 
     // Also update users table name and avatar

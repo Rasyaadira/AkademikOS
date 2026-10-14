@@ -165,6 +165,9 @@ try {
   if (!profCols.some((c) => c.name === "photo_url")) {
     db.exec("ALTER TABLE profile ADD COLUMN photo_url TEXT;");
   }
+  if (!profCols.some((c) => c.name === "no_ai_mode")) {
+    db.exec("ALTER TABLE profile ADD COLUMN no_ai_mode INTEGER DEFAULT 0;");
+  }
 } catch (e) {
   console.log("Migration check profile:", e);
 }

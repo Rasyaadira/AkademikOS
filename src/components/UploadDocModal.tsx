@@ -14,6 +14,7 @@ import {
   FileCheck,
   ChevronRight,
   ExternalLink,
+  AlertCircle,
 } from "lucide-react";
 
 interface UploadDocModalProps {
@@ -29,6 +30,7 @@ interface UploadDocModalProps {
   }) => void;
   initialFile?: File | null;
   courses?: string[];
+  noAiMode?: boolean;
 }
 
 export default function UploadDocModal({
@@ -37,20 +39,21 @@ export default function UploadDocModal({
   onUploadSuccess,
   initialFile = null,
   courses = [],
+  noAiMode = false,
 }: UploadDocModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(initialFile);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedPath, setUploadedPath] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<"pick" | "routing">("pick");
 
-  // Routing State
-  const defaultCourse = courses[0] || "Mata Kuliah Umum";
-  const [selectedCourse, setSelectedCourse] = useState(defaultCourse);
+  // Routing State - Default empty to avoid assigning wrong course
+  const [selectedCourse, setSelectedCourse] = useState("");
   const [isCustomCourse, setIsCustomCourse] = useState(false);
   const [customCourseName, setCustomCourseName] = useState("");
   const [docType, setDocType] = useState<"rps" | "slide" | "tugas" | "praktikum" | "lainnya">("rps");
   const [sessionNo, setSessionNo] = useState<number | "all">("all");
   const [topic, setTopic] = useState("");
+  const [showEmptyCourseConfirm, setShowEmptyCourseConfirm] = useState(false);
 
   useEffect(() => {
     if (initialFile) {
@@ -59,17 +62,11 @@ export default function UploadDocModal({
     }
   }, [initialFile]);
 
-  useEffect(() => {
-    if (courses.length > 0 && !courses.includes(selectedCourse) && !isCustomCourse) {
-      setSelectedCourse(courses[0]);
-    }
-  }, [courses]);
-
   if (!isOpen) return null;
 
   const handleDirectUpload = async (file: File) => {
     setIsUploading(true);
-    let pathResult = `/storage/${file.name}`;
+    let pathResult = `/api/storage/${file.name}`;
 
     try {
       const formData = new FormData();
@@ -117,12 +114,19 @@ export default function UploadDocModal({
     }
   };
 
-  const handleFinalConfirm = () => {
+  const handleFinalConfirm = (forceEmpty = false) => {
     if (!selectedFile) return;
 
     const finalCourse = isCustomCourse
-      ? customCourseName.trim() || "Mata Kuliah Baru"
-      : selectedCourse;
+      ? customCourseName.trim()
+      : selectedCourse.trim();
+
+    if (!finalCourse && !forceEmpty) {
+      setShowEmptyCourseConfirm(true);
+      return;
+    }
+
+    const courseToSave = finalCourse || "Umum / Lainnya";
 
     const docTypeLabel =
       docType === "rps"
@@ -138,9 +142,9 @@ export default function UploadDocModal({
     onUploadSuccess({
       fileName: selectedFile.name,
       docType: docTypeLabel,
-      course: finalCourse,
+      course: courseToSave,
       sessionNo: typeof sessionNo === "number" ? sessionNo : undefined,
-      filePath: uploadedPath || `/storage/${selectedFile.name}`,
+      filePath: uploadedPath || `/api/storage/${selectedFile.name}`,
       topic: topic.trim() || undefined,
     });
 
@@ -153,6 +157,8 @@ export default function UploadDocModal({
     setCurrentStep("pick");
     setIsCustomCourse(false);
     setCustomCourseName("");
+    setSelectedCourse("");
+    setShowEmptyCourseConfirm(false);
     setTopic("");
     onClose();
   };
@@ -170,11 +176,11 @@ export default function UploadDocModal({
             <h3 className="text-base sm:text-lg font-bold text-m3-on-surface">
               {currentStep === "pick" ? "Unggah Dokumen Perkuliahan" : "Inspeksi & Penempatan Berkas"}
             </h3>
-            <p className="text-xs text-m3-secondary">
-              {currentStep === "pick"
-                ? "Pilih berkas RPS, Slide, atau Modul Perkuliahan"
-                : "Tentukan penempatan berkas ke dalam folder mata kuliah & pertemuan"}
-            </p>
+            {currentStep === "pick" && (
+              <p className="text-xs text-m3-secondary">
+                Pilih berkas RPS, Slide, atau Modul Perkuliahan
+              </p>
+            )}
           </div>
           <button
             onClick={handleClose}
@@ -251,15 +257,48 @@ export default function UploadDocModal({
             </div>
 
             {/* AI Assistant Question Box */}
-            <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                <span>Rekomendasi Penempatan Dokumen (AI Routing)</span>
+            {!noAiMode && (
+              <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
+                  <Sparkles className="w-4 h-4 text-indigo-600" />
+                  <span>Rekomendasi Penempatan Dokumen (AI Routing)</span>
+                </div>
+                <p className="text-[11px] text-indigo-950/80 leading-relaxed">
+                  Dokumen ini terdeteksi sebagai bahan perkuliahan. Silakan konfirmasi mata kuliah tujuan dan kategorinya agar berkas langsung terorganisir ke folder yang tepat.
+                </p>
               </div>
-              <p className="text-[11px] text-indigo-950/80 leading-relaxed">
-                Dokumen ini terdeteksi sebagai bahan perkuliahan. Silakan konfirmasi mata kuliah tujuan dan kategorinya agar berkas langsung terorganisir ke folder yang tepat.
-              </p>
-            </div>
+            )}
+
+            {/* Empty Course Confirmation Alert */}
+            {showEmptyCourseConfirm && (
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2.5 animate-in fade-in">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-700 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-amber-950">
+                    <p className="font-bold">Mata kuliah belum dipilih</p>
+                    <p className="text-[11px] text-amber-900/80 mt-0.5">
+                      Dokumen akan dikelompokkan ke kategori <strong>Umum / Lainnya</strong>. Apakah ingin memilih mata kuliah terlebih dahulu?
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmptyCourseConfirm(false)}
+                    className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-xs font-semibold text-amber-900 hover:bg-amber-100 transition-colors"
+                  >
+                    Pilih Matkul Dulu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFinalConfirm(true)}
+                    className="px-3 py-1.5 rounded-lg bg-amber-700 text-white text-xs font-bold hover:bg-amber-800 transition-colors"
+                  >
+                    Tetap Simpan sebagai Umum
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Placement Form */}
             <div className="space-y-3.5 text-xs">
@@ -272,24 +311,27 @@ export default function UploadDocModal({
                   {!isCustomCourse ? (
                     <select
                       value={selectedCourse}
-                      onChange={(e) => setSelectedCourse(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedCourse(e.target.value);
+                        if (showEmptyCourseConfirm) setShowEmptyCourseConfirm(false);
+                      }}
                       className="flex-1 px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                     >
-                      {courses.length > 0 ? (
-                        courses.map((c) => (
-                          <option key={c} value={c}>
-                            {c}
-                          </option>
-                        ))
-                      ) : (
-                        <option value="Mata Kuliah Umum">Mata Kuliah Umum</option>
-                      )}
+                      <option value="">-- Pilih Mata Kuliah (Bisa Dikosongkan) --</option>
+                      {courses.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
                     </select>
                   ) : (
                     <input
                       type="text"
                       value={customCourseName}
-                      onChange={(e) => setCustomCourseName(e.target.value)}
+                      onChange={(e) => {
+                        setCustomCourseName(e.target.value);
+                        if (showEmptyCourseConfirm) setShowEmptyCourseConfirm(false);
+                      }}
                       placeholder="Ketik nama mata kuliah baru..."
                       className="flex-1 px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                     />
@@ -378,7 +420,7 @@ export default function UploadDocModal({
           {currentStep === "routing" && (
             <button
               type="button"
-              onClick={handleFinalConfirm}
+              onClick={() => handleFinalConfirm(false)}
               className="px-5 py-2 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs flex items-center gap-1.5"
             >
               <span>Simpan & Buka Dokumen Asli</span>

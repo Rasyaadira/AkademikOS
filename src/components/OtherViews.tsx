@@ -54,6 +54,7 @@ export interface StudentProfile {
   targetGPA: string;
   maxSKS: number;
   photoUrl?: string;
+  noAiMode?: boolean;
 }
 
 export interface CourseLecturerItem {
@@ -249,6 +250,7 @@ export default function OtherViews({
 
   // Hide lecturer photos preference state
   const [hideLecturerPhotos, setHideLecturerPhotos] = useState(false);
+  const [isRpsMaximized, setIsRpsMaximized] = useState(false);
 
   // Helper to reliably construct non-404 file URLs
   const getDocFileUrl = (doc: { filePath?: string; name: string }) => {
@@ -534,6 +536,7 @@ export default function OtherViews({
               onDeleteSchedule={onDeleteSchedule}
               onAddSchedule={onAddSchedule}
               isExpanded={true}
+              noAiMode={!!profile.noAiMode}
             />
           </div>
 
@@ -890,9 +893,9 @@ export default function OtherViews({
 
       {/* TAB RPS & MATERI: 40/60 FOLDER TREE + REALISTIC ACADEMIC DOCUMENT PREVIEW */}
       {activeTab === "rps" && (
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-140px)] min-h-[580px] max-h-[820px] items-stretch overflow-hidden">
-          {/* KOLOM KIRI (35%): FOLDER TREE DENGAN STYLE SAMA SEPERTI CATATAN KULIAH */}
-          <div className="lg:col-span-4 bg-white border border-m3-outline-variant rounded-3xl p-4 sm:p-5 flex flex-col space-y-3.5 shadow-xs h-full overflow-hidden">
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 h-[calc(100vh-140px)] min-h-[580px] max-h-[820px] items-stretch overflow-hidden relative">
+          {/* KOLOM KIRI (35%): FOLDER TREE (SEMBUNYI JIKA DIMAKSIMALKAN) */}
+          <div className={`${isRpsMaximized ? "hidden" : "lg:col-span-4"} bg-white border border-m3-outline-variant rounded-3xl p-4 sm:p-5 flex flex-col space-y-3.5 shadow-xs h-full overflow-hidden transition-all`}>
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-bold text-m3-on-surface">Folder Materi & RPS</h3>
               <span className="text-[11px] text-m3-secondary font-medium">{rpsFolders.length} Mata Kuliah</span>
@@ -1012,8 +1015,8 @@ export default function OtherViews({
             </div>
           </div>
 
-          {/* KOLOM KANAN (65%): PREVIEW DOKUMEN AKADEMIK SEBENARNYA */}
-          <div className="lg:col-span-8 bg-white border border-m3-outline-variant rounded-3xl p-5 sm:p-6 flex flex-col space-y-4 shadow-xs h-full overflow-hidden">
+          {/* KOLOM KANAN: PREVIEW DOKUMEN AKADEMIK SEBENARNYA */}
+          <div className={`${isRpsMaximized ? "lg:col-span-12" : "lg:col-span-8"} bg-white border border-m3-outline-variant rounded-3xl p-5 sm:p-6 flex flex-col space-y-4 shadow-xs h-full overflow-hidden transition-all`}>
             {!currentDoc ? (
               <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-m3-secondary">
                 <FileText className="w-12 h-12 stroke-[1.5] mb-2 opacity-50" />
@@ -1043,6 +1046,24 @@ export default function OtherViews({
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setIsRpsMaximized(!isRpsMaximized)}
+                      className="min-h-[44px] px-3.5 py-1.5 rounded-full bg-m3-surface-container hover:bg-m3-surface-container-high text-xs font-semibold text-m3-on-surface border border-m3-outline-variant flex items-center gap-1.5 transition-colors"
+                      title={isRpsMaximized ? "Kecilkan pratinjau dokumen" : "Perbesar pratinjau dokumen dalam aplikasi"}
+                    >
+                      {isRpsMaximized ? (
+                        <>
+                          <Minimize2 className="w-3.5 h-3.5 text-m3-secondary" />
+                          <span>Kecilkan</span>
+                        </>
+                      ) : (
+                        <>
+                          <Maximize2 className="w-3.5 h-3.5 text-m3-secondary" />
+                          <span>Perbesar</span>
+                        </>
+                      )}
+                    </button>
                     <a
                       href={getDocFileUrl(currentDoc)}
                       target="_blank"
@@ -1378,6 +1399,21 @@ export default function OtherViews({
                     className="w-4 h-4 rounded-md accent-m3-primary cursor-pointer"
                   />
                 </label>
+                <label className="flex items-center justify-between cursor-pointer pt-2 border-t border-slate-100">
+                  <div>
+                    <span className="text-xs font-semibold text-m3-on-surface block">Mode Bebas AI (Non-AI Mode)</span>
+                    <span className="text-[11px] text-m3-secondary">Matikan seluruh fitur AI, impor jadwal AI, dan rekomendasi otomatis di aplikasi</span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={!!formData.noAiMode}
+                    onChange={(e) => {
+                      handleInputChange("noAiMode", e.target.checked);
+                      onUpdateProfile({ ...formData, noAiMode: e.target.checked });
+                    }}
+                    className="w-4 h-4 rounded-md accent-m3-primary cursor-pointer"
+                  />
+                </label>
               </div>
 
               {/* Zona Bahaya: Reset Bersih */}
@@ -1461,7 +1497,11 @@ export default function OtherViews({
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            <div className={`grid gap-4 ${
+              hideLecturerPhotos
+                ? "grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5"
+                : "grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+            }`}>
               {courseLecturers.map((c) => (
               <div
                 key={c.id}
@@ -1682,14 +1722,16 @@ export default function OtherViews({
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="font-semibold text-m3-on-surface">Hari & Jam Kelas</label>
+                      <div className="flex items-center justify-between">
+                        <label className="font-semibold text-m3-on-surface">Hari & Jam Kelas</label>
+                        <span className="text-[10px] text-m3-secondary font-medium">(Otomatis dari Kalender)</span>
+                      </div>
                       <input
                         type="text"
                         value={editingLecturer.dayTime}
-                        onChange={(e) =>
-                          setEditingLecturer({ ...editingLecturer, dayTime: e.target.value })
-                        }
-                        className="w-full p-2.5 rounded-xl border border-m3-outline bg-m3-surface-container/30 focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                        readOnly
+                        disabled
+                        className="w-full p-2.5 rounded-xl border border-m3-outline-variant bg-slate-100 text-slate-600 cursor-not-allowed select-none font-medium text-xs"
                       />
                     </div>
                     <div className="space-y-1">

@@ -40,7 +40,11 @@ import {
   Globe,
   X,
   Sparkles,
+  Moon,
+  Sun,
+  Key,
 } from "lucide-react";
+import QuizSection from "./QuizSection";
 
 export interface StudentProfile {
   name: string;
@@ -57,6 +61,10 @@ export interface StudentProfile {
   noAiMode?: boolean;
   semesterStartDate?: string;
   aiTokenUsage?: number;
+  darkMode?: boolean;
+  openCodeApiKey?: string;
+  openCodeBaseUrl?: string;
+  openCodeModel?: string;
 }
 
 export interface CourseLecturerItem {
@@ -177,6 +185,14 @@ export default function OtherViews({
   const [openRpsFolderId, setOpenRpsFolderId] = useState<string>("");
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [rpsSearchQuery, setRpsSearchQuery] = useState("");
+  const [rawUploadedDocs, setRawUploadedDocs] = useState<any[]>([]);
+  const [showOpenCodeKey, setShowOpenCodeKey] = useState(false);
+  const [openCodeTestStatus, setOpenCodeTestStatus] = useState<{
+    tested: boolean;
+    loading: boolean;
+    success?: boolean;
+    message?: string;
+  }>({ tested: false, loading: false });
 
   // Load persistent documents from SQLite on mount
   React.useEffect(() => {
@@ -184,6 +200,7 @@ export default function OtherViews({
       .then((res) => res.json())
       .then((docs) => {
         if (Array.isArray(docs) && docs.length > 0) {
+          setRawUploadedDocs(docs);
           const folderMap = new Map<string, CourseFolder>();
           docs.forEach((doc: any) => {
             const courseName = doc.course || "Mata Kuliah Umum";
@@ -646,6 +663,7 @@ export default function OtherViews({
               isExpanded={true}
               noAiMode={!!profile.noAiMode}
               semesterStartDate={profile.semesterStartDate}
+              isHomeWidget={false}
             />
           </div>
 
@@ -1239,16 +1257,19 @@ export default function OtherViews({
                         {courseRelatedTasks.map((t) => {
                           const isUlangan = t.taskType === "ulangan";
                           const isKuis = t.taskType === "kuis";
-                          const icon = isUlangan ? "🎯" : isKuis ? "⚡" : "📝";
                           const typeLabel = isUlangan ? "Ulangan" : isKuis ? "Kuis" : "Tugas";
+                          const badgeColor = isUlangan
+                            ? "bg-rose-50 border-rose-300 text-rose-900"
+                            : isKuis
+                            ? "bg-purple-50 border-purple-300 text-purple-900"
+                            : "bg-amber-50 border-amber-300 text-amber-900";
                           return (
                             <span
                               key={t.id}
-                              className="px-2.5 py-1 rounded-xl bg-white border border-amber-300 text-[10px] font-semibold whitespace-nowrap shadow-2xs flex items-center gap-1.5"
+                              className={`px-2.5 py-1 rounded-xl border text-[10px] font-semibold whitespace-nowrap shadow-2xs flex items-center gap-1.5 ${badgeColor}`}
                             >
-                              <span>{icon}</span>
-                              <span className="font-bold text-amber-950 truncate max-w-[150px]">{t.title}</span>
-                              <span className="text-[9px] text-amber-700 font-normal">({typeLabel} • {t.deadlineLabel})</span>
+                              <span className="font-bold truncate max-w-[150px]">{t.title}</span>
+                              <span className="text-[9px] opacity-80 font-normal">({typeLabel} • {t.deadlineLabel})</span>
                             </span>
                           );
                         })}
@@ -1580,6 +1601,44 @@ export default function OtherViews({
                 </span>
               </div>
 
+              {/* 1-Click Dark Mode Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-m3-surface-container/40 border border-m3-outline-variant/60 shadow-2xs">
+                <div className="flex items-center gap-3">
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors ${
+                    formData.darkMode ? 'bg-indigo-950 border-indigo-700 text-indigo-300' : 'bg-amber-100 border-amber-300 text-amber-800'
+                  }`}>
+                    {formData.darkMode ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5" />}
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-m3-on-surface block">Mode Gelap (Dark Mode)</span>
+                    <span className="text-[11px] text-m3-secondary">1-Klik untuk mengaktifkan tema gelap yang nyaman di mata</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextDark = !formData.darkMode;
+                    handleInputChange("darkMode", nextDark);
+                    if (typeof document !== "undefined") {
+                      document.documentElement.classList.toggle("dark", nextDark);
+                    }
+                    if (typeof window !== "undefined") {
+                      localStorage.setItem("akademikos_theme", nextDark ? "dark" : "light");
+                    }
+                    onUpdateProfile({ ...formData, darkMode: nextDark });
+                  }}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${
+                    formData.darkMode ? "bg-m3-primary" : "bg-slate-300"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      formData.darkMode ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
+                </button>
+              </div>
+
               <div className="p-4 rounded-2xl bg-m3-surface-container/30 border border-m3-outline-variant/60 space-y-2 text-xs">
                 <h4 className="font-bold text-m3-on-surface">Preferensi Pengingat</h4>
                 <label className="flex items-center justify-between cursor-pointer">
@@ -1617,6 +1676,108 @@ export default function OtherViews({
                     className="w-4 h-4 rounded-md accent-m3-primary cursor-pointer"
                   />
                 </label>
+              </div>
+
+              {/* Integrasi OpenCode AI API */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-m3-surface-container/30 border border-m3-outline-variant/60 space-y-3">
+                <div className="flex items-center justify-between pb-1 border-b border-m3-outline-variant/50">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-m3-primary" />
+                    <h4 className="text-xs font-bold text-m3-on-surface">Integrasi OpenCode AI API</h4>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    formData.openCodeApiKey ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                  }`}>
+                    {formData.openCodeApiKey ? "Terhubung" : "Menunggu API Key"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-m3-secondary leading-relaxed">
+                  Hubungkan AkademikOS dengan endpoint OpenCode AI untuk asisten akademik otonom dan analisis cerdas.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-m3-on-surface">Base URL OpenCode</label>
+                    <input
+                      type="text"
+                      value={formData.openCodeBaseUrl || "https://api.opencode.ai/v1"}
+                      onChange={(e) => handleInputChange("openCodeBaseUrl", e.target.value)}
+                      placeholder="https://api.opencode.ai/v1"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-m3-on-surface">Model OpenCode</label>
+                    <input
+                      type="text"
+                      value={formData.openCodeModel || "opencode/gpt-4o"}
+                      onChange={(e) => handleInputChange("openCodeModel", e.target.value)}
+                      placeholder="opencode/gpt-4o atau opencode/claude-3-5-sonnet"
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface font-mono"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-m3-on-surface">API Key OpenCode</label>
+                    <span className="text-[10px] text-m3-secondary italic">Disimpan aman di database lokal</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showOpenCodeKey ? "text" : "password"}
+                      value={formData.openCodeApiKey || ""}
+                      onChange={(e) => handleInputChange("openCodeApiKey", e.target.value)}
+                      placeholder="sk-opencode-... (isi saat siap digunakan)"
+                      className="w-full px-3 py-2 pr-20 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOpenCodeKey(!showOpenCodeKey)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold text-m3-secondary hover:text-m3-primary cursor-pointer"
+                    >
+                      {showOpenCodeKey ? "Sembunyikan" : "Lihat"}
+                    </button>
+                  </div>
+                </div>
+                {/* Test Connection Button */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={openCodeTestStatus.loading}
+                    onClick={async () => {
+                      setOpenCodeTestStatus({ tested: true, loading: true });
+                      try {
+                        const res = await fetch("/api/ai/opencode", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ action: "test" }),
+                        });
+                        const data = await res.json();
+                        setOpenCodeTestStatus({
+                          tested: true,
+                          loading: false,
+                          success: !!data.success,
+                          message: data.message,
+                        });
+                      } catch (err: any) {
+                        setOpenCodeTestStatus({
+                          tested: true,
+                          loading: false,
+                          success: false,
+                          message: `Kesalahan jaringan: ${err.message}`,
+                        });
+                      }
+                    }}
+                    className="px-3.5 py-1.5 rounded-xl border border-m3-outline text-xs font-semibold hover:bg-m3-surface-container transition-all cursor-pointer inline-flex items-center gap-1.5 self-start"
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-m3-primary" />
+                    <span>{openCodeTestStatus.loading ? "Menguji..." : "Tes Koneksi OpenCode"}</span>
+                  </button>
+                  {openCodeTestStatus.tested && (
+                    <span className={`text-[11px] font-medium ${openCodeTestStatus.success ? "text-emerald-600" : "text-amber-600"}`}>
+                      {openCodeTestStatus.message}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Zona Bahaya: Reset Bersih */}
@@ -2197,17 +2358,20 @@ export default function OtherViews({
         </div>
       )}
 
-      {/* TAB QUIZ: DI-BLANK-IN SESUAI INSTRUKSI PENGGUNA */}
+      {/* TAB QUIZ & LATIHAN MANDIRI */}
       {activeTab === "quiz" && (
-        <div className="flex-1 flex flex-col items-center justify-center min-h-[420px] rounded-3xl border border-dashed border-m3-outline-variant/60 bg-m3-surface-container/20 p-8 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-m3-surface-container flex items-center justify-center text-m3-secondary/60 mb-3">
-            <Sparkles className="w-6 h-6" />
-          </div>
-          <h3 className="text-sm font-bold text-m3-on-surface">Fitur AI Quiz</h3>
-          <p className="text-xs text-m3-secondary max-w-sm mt-1">
-            Halaman ini dikosongkan sementara waktu sesuai instruksi pengembangan.
-          </p>
-        </div>
+        <QuizSection
+          profile={profile}
+          courses={Array.from(new Set([...schedules.map((s) => s.course), ...courseLecturers.map((cl) => cl.courseName)].filter(Boolean)))}
+          tasks={tasks}
+          uploadedDocs={rawUploadedDocs.map((d: any) => ({
+            id: d.id,
+            course_name: d.course || "Mata Kuliah Umum",
+            file_name: d.fileName || "Dokumen",
+            topic: d.topic,
+            session_no: d.sessionNo,
+          }))}
+        />
       )}
     </section>
   );

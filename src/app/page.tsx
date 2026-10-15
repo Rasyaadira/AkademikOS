@@ -74,6 +74,9 @@ export default function HomeDashboard() {
         const profData = await profRes.json();
         if (profData && profData.name) {
           setProfile(profData);
+          if (profData.darkMode !== undefined) {
+            document.documentElement.classList.toggle("dark", !!profData.darkMode);
+          }
         }
       }
     } catch (err) {
@@ -253,6 +256,9 @@ export default function HomeDashboard() {
   // Update profile and persist to DB
   const handleUpdateProfile = async (updated: StudentProfile) => {
     setProfile(updated);
+    if (updated.darkMode !== undefined) {
+      document.documentElement.classList.toggle("dark", !!updated.darkMode);
+    }
     try {
       await fetch("/api/profile", {
         method: "PUT",
@@ -463,6 +469,7 @@ export default function HomeDashboard() {
                   onAddSchedule={handleAddSchedule}
                   noAiMode={!!profile.noAiMode}
                   semesterStartDate={profile.semesterStartDate}
+                  isHomeWidget={true}
                 />
               </div>
 
@@ -509,6 +516,7 @@ export default function HomeDashboard() {
         onClose={() => setIsQuickTaskOpen(false)}
         onAddTask={handleAddTask}
         courses={Array.from(new Set(schedules.map((s) => s.course).filter(Boolean)))}
+        semesterStartDate={profile.semesterStartDate}
       />
 
       <UploadDocModal
@@ -521,6 +529,7 @@ export default function HomeDashboard() {
         initialFile={droppedFile}
         courses={Array.from(new Set(schedules.map((s) => s.course).filter(Boolean)))}
         noAiMode={!!profile.noAiMode}
+        semesterStartDate={profile.semesterStartDate}
       />
     </div>
   );

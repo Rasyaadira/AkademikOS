@@ -31,6 +31,7 @@ interface UploadDocModalProps {
   initialFile?: File | null;
   courses?: string[];
   noAiMode?: boolean;
+  semesterStartDate?: string;
 }
 
 export default function UploadDocModal({
@@ -40,18 +41,29 @@ export default function UploadDocModal({
   initialFile = null,
   courses = [],
   noAiMode = false,
+  semesterStartDate,
 }: UploadDocModalProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(initialFile);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedPath, setUploadedPath] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<"pick" | "routing">("pick");
 
+  // Academic week calculation (default: minggu sekarang)
+  const semesterStart = semesterStartDate
+    ? new Date(semesterStartDate)
+    : new Date(2026, 8, 7);
+  const now = new Date();
+  const currentWeek = Math.min(
+    16,
+    Math.max(1, Math.floor((now.getTime() - semesterStart.getTime()) / (7 * 86400000)) + 1)
+  );
+
   // Routing State - Default empty to avoid assigning wrong course
   const [selectedCourse, setSelectedCourse] = useState("");
   const [isCustomCourse, setIsCustomCourse] = useState(false);
   const [customCourseName, setCustomCourseName] = useState("");
   const [docType, setDocType] = useState<"rps" | "slide" | "tugas" | "praktikum" | "lainnya">("rps");
-  const [sessionNo, setSessionNo] = useState<number | "all">("all");
+  const [sessionNo, setSessionNo] = useState<number | "all">(currentWeek);
   const [topic, setTopic] = useState("");
   const [showEmptyCourseConfirm, setShowEmptyCourseConfirm] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -62,100 +74,116 @@ export default function UploadDocModal({
     setIsAnalyzing(true);
     setAnalysisFeedback(null);
     setTimeout(() => {
-      const lower = selectedFile.name.toLowerCase();
-      
-      // 1. Direct match with registered courses
-      let matched = courses.find((c) => lower.includes(c.toLowerCase()) || c.toLowerCase().includes(lower));
+      // Clean filename and break into distinct word tokens
+      const rawName = selectedFile.name.replace(/\.[^/.]+$/, "").toLowerCase();
+      const tokens = rawName.split(/[^a-z0-9]+/i).filter(Boolean);
 
-      // 2. Heuristic speculation from academic keywords
+      // 1. Direct match with registered courses (requires full match or all major course tokens)
+      let matched = courses.find((c) => {
+        const cLower = c.toLowerCase();
+        if (cLower.length >= 5 && rawName.includes(cLower)) return true;
+        const cWords = cLower.split(/[^a-z0-9]+/i).filter((w) => w.length > 3 && !["dan", "untuk", "dari", "pada"].includes(w));
+        return cWords.length > 0 && cWords.every((w) => tokens.includes(w));
+      });
+
+      // 2. Specific heuristic match by tokens (NEVER use raw substring on 2-letter words like 'ui')
       if (!matched) {
-        const keywordMap: Record<string, string> = {
-          metnum: "Metode Numerik",
-          numerik: "Metode Numerik",
-          strukdat: "Struktur Data",
-          struktur: "Struktur Data",
-          basdat: "Basis Data",
-          database: "Basis Data",
-          sql: "Basis Data",
-          jarkom: "Jaringan Komputer",
-          jaringan: "Jaringan Komputer",
-          network: "Jaringan Komputer",
-          os: "Sistem Operasi",
-          operasi: "Sistem Operasi",
-          rpl: "Rekayasa Perangkat Lunak",
-          software: "Rekayasa Perangkat Lunak",
-          ai: "Kecerdasan Buatan",
-          buatan: "Kecerdasan Buatan",
-          pbo: "Pemrograman Berorientasi Objek",
-          oop: "Pemrograman Berorientasi Objek",
-          kalkulus: "Kalkulus",
-          aljabar: "Aljabar Linear",
-          algoritma: "Algoritma & Pemrograman",
-          algo: "Algoritma & Pemrograman",
-          daspro: "Dasar Pemrograman",
-          ui: "Desain UI/UX",
-          ux: "Desain UI/UX",
-          etika: "Etika Profesi",
-        };
+        const tokenRules: { check: (toks: string[], raw: string) => boolean; target: string }[] = [
+          { check: (t) => t.some((x) => x.startsWith("metnum") || x.includes("numerik")), target: "Metode Numerik" },
+          { check: (t) => t.some((x) => x.startsWith("strukdat") || x.includes("struktur")), target: "Struktur Data" },
+          { check: (t) => t.some((x) => x.startsWith("basdat") || x.includes("database") || x === "sql"), target: "Pemrograman Basis Data" },
+          { check: (t) => t.some((x) => x.startsWith("jarkom") || x.includes("jaringan") || x.includes("network")), target: "Jaringan Komputer" },
+          { check: (t) => t.includes("os") || t.some((x) => x.includes("operasi")), target: "Sistem Operasi" },
+          { check: (t) => t.includes("rpl") || t.some((x) => x.includes("software")), target: "Rekayasa Perangkat Lunak" },
+          { check: (t) => t.includes("ai") || t.some((x) => x.includes("buatan") || x.includes("artificial")), target: "Kecerdasan Buatan" },
+          { check: (t) => t.includes("pbo") || t.includes("oop") || t.some((x) => x.includes("berorientasi")), target: "Pemrograman Berorientasi Objek" },
+          { check: (t) => t.some((x) => x.includes("kalkulus")), target: "Kalkulus" },
+          { check: (t) => t.some((x) => x.includes("aljabar") || x.includes("linear")), target: "Aljabar Linear" },
+          { check: (t) => t.some((x) => x.startsWith("algo") || x.startsWith("daspro")), target: "Algoritma & Pemrograman" },
+          { check: (t) => t.some((x) => x.includes("grafik") || x.includes("cg")), target: "Grafika Komputer" },
+          { check: (t) => t.some((x) => x.includes("web") || x.includes("html") || x.includes("frontend")), target: "Pemrograman Web Lanjut" },
+          { check: (t) => t.some((x) => x.includes("proyek") || x.startsWith("manpro") || x.includes("project")), target: "Manajemen Proyek TIK" },
+          { check: (t) => t.some((x) => x.includes("distribusi") || x.startsWith("sister")), target: "Sistem Terdistribusi" },
+          { check: (t) => t.some((x) => x.includes("visual")), target: "Pemrograman Visual" },
+          { check: (t) => t.includes("adsi") || (t.includes("analisis") && t.includes("sistem")), target: "Analisis dan Desain Sistem Informasi" },
+          { check: (t) => t.includes("ui") || t.includes("ux") || t.includes("uiux") || t.includes("figma") || t.some((x) => x.includes("desain")), target: "Desain UI/UX" },
+          { check: (t) => t.some((x) => x.includes("etika")), target: "Etika Profesi" },
+        ];
 
-        for (const [kw, courseName] of Object.entries(keywordMap)) {
-          if (lower.includes(kw)) {
-            // Check if user has a registered course close to this name
-            const existingSimilar = courses.find((c) => c.toLowerCase().includes(kw) || c.toLowerCase().includes(courseName.toLowerCase()));
-            matched = existingSimilar || courseName;
+        for (const rule of tokenRules) {
+          if (rule.check(tokens, rawName)) {
+            const existingSimilar = courses.find((c) =>
+              c.toLowerCase().includes(rule.target.toLowerCase()) ||
+              rule.target.toLowerCase().includes(c.toLowerCase())
+            );
+            matched = existingSimilar || rule.target;
             break;
           }
         }
       }
 
-      // 3. Fallback speculation: Pick first available course or cleaned title segment
-      if (!matched) {
-        if (courses.length > 0) {
-          matched = courses[0];
+      // 3. Match docType
+      let detectedDocType: "rps" | "slide" | "tugas" | "praktikum" | "lainnya" = "slide";
+      if (rawName.includes("rps") || rawName.includes("silabus") || rawName.includes("kurikulum")) {
+        detectedDocType = "rps";
+        setDocType("rps");
+        setSessionNo("all");
+      } else if (rawName.includes("tugas") || rawName.includes("quiz") || rawName.includes("kuis") || rawName.includes("soal") || rawName.includes("assignment")) {
+        detectedDocType = "tugas";
+        setDocType("tugas");
+      } else if (rawName.includes("praktikum") || rawName.includes("lab") || rawName.includes("modul")) {
+        detectedDocType = "praktikum";
+        setDocType("praktikum");
+      } else if (rawName.includes("slide") || rawName.includes("ppt") || rawName.includes("materi")) {
+        detectedDocType = "slide";
+        setDocType("slide");
+      }
+
+      // Check meeting number in filename, otherwise default to currentWeek (minggu sekarang)
+      if (detectedDocType !== "rps") {
+        const matchMeeting = rawName.match(/(?:pertemuan|minggu|sesi|meet|m|tugas|praktikum)[_ -]?(\d{1,2})/i);
+        const detectedNum = matchMeeting ? parseInt(matchMeeting[1], 10) : currentWeek;
+        if (detectedNum >= 1 && detectedNum <= 16) {
+          setSessionNo(detectedNum);
         } else {
-          // Speculate from filename words
-          const cleanWords = selectedFile.name
-            .replace(/\.[^/.]+$/, "")
-            .replace(/^[0-9._\- ]+/, "")
-            .split(/[_-]/)[0];
-          matched = cleanWords.trim() || "Mata Kuliah Umum";
+          setSessionNo(currentWeek);
         }
       }
 
-      setSelectedCourse(matched);
-      setIsCustomCourse(!courses.includes(matched));
-      if (!courses.includes(matched)) {
-        setCustomCourseName(matched);
-      }
-      setAnalysisFeedback({
-        type: "success",
-        message: `AI berspekulasi mata kuliah: "${matched}" (dapat Anda ganti jika kurang sesuai).`,
-      });
-
-      // Match docType
-      if (lower.includes("rps") || lower.includes("silabus") || lower.includes("kurikulum")) {
-        setDocType("rps");
-        setSessionNo("all");
-      } else if (lower.includes("slide") || lower.includes("ppt") || lower.includes("materi")) {
-        setDocType("slide");
-        setSessionNo(1);
-      } else if (lower.includes("tugas") || lower.includes("assignment") || lower.includes("proyek")) {
-        setDocType("tugas");
-        setSessionNo(1);
-      } else if (lower.includes("praktikum") || lower.includes("lab") || lower.includes("modul")) {
-        setDocType("praktikum");
-        setSessionNo(1);
+      // Set matched course or leave blank with clear feedback
+      if (matched) {
+        setSelectedCourse(matched);
+        setIsCustomCourse(!courses.includes(matched));
+        if (!courses.includes(matched)) {
+          setCustomCourseName(matched);
+        }
+        setAnalysisFeedback({
+          type: "success",
+          message: `AI mendeteksi mata kuliah: "${matched}" (dapat Anda ubah jika kurang sesuai).`,
+        });
+      } else {
+        // DO NOT FORCE DESAIN UI/UX! Leave empty and request user selection
+        setSelectedCourse("");
+        setIsCustomCourse(false);
+        setCustomCourseName("");
+        setAnalysisFeedback({
+          type: "warning",
+          message: "Mata kuliah belum terdeteksi otomatis dari nama berkas. Silakan pilih salah satu mata kuliah di bawah.",
+        });
       }
 
-      // Topic
+      // Match topic title
       const cleanTopic = selectedFile.name
         .replace(/\.[^/.]+$/, "")
         .replace(/^[0-9._\- ]+/, "")
-        .replace(/[_-]/g, " ");
-      setTopic(cleanTopic);
+        .replace(/_/g, " ")
+        .trim();
+      if (cleanTopic && !topic) {
+        setTopic(cleanTopic);
+      }
+
       setIsAnalyzing(false);
-      setShowEmptyCourseConfirm(false);
-    }, 1200);
+    }, 700);
   };
 
   useEffect(() => {
@@ -519,9 +547,14 @@ export default function UploadDocModal({
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-m3-on-surface block">
-                    Pertemuan Ke-
-                  </label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-bold text-m3-on-surface block">
+                      Pertemuan Ke-
+                    </label>
+                    <span className="text-[10px] text-m3-secondary font-medium">
+                      Default: Minggu ke-{currentWeek}
+                    </span>
+                  </div>
                   <select
                     value={sessionNo}
                     onChange={(e) =>
@@ -532,7 +565,7 @@ export default function UploadDocModal({
                     <option value="all">Umum / Seluruh Semester</option>
                     {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
                       <option key={n} value={n}>
-                        Pertemuan Sesi {n}
+                        Pertemuan Sesi {n} {n === currentWeek ? "(Minggu Sekarang)" : ""}
                       </option>
                     ))}
                   </select>

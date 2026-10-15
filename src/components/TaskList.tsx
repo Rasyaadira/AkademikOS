@@ -228,7 +228,7 @@ export default function TaskList({
                                 : "bg-amber-100 text-amber-800 border border-amber-300"
                             }`}
                           >
-                            {task.taskType === "ulangan" ? "🎯 Ulangan" : task.taskType === "kuis" ? "⚡ Kuis" : "📝 Tugas"}
+                            {task.taskType === "ulangan" ? "Ulangan" : task.taskType === "kuis" ? "Kuis" : "Tugas"}
                           </span>
                         )}
 

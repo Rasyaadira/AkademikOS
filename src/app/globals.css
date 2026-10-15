@@ -31,6 +31,83 @@
   --md-sys-color-on-error-container: #410002;
 }
 
+.dark {
+  --md-sys-color-surface: #0B1120;
+  --md-sys-color-on-surface: #F8FAFC;
+  --md-sys-color-surface-container-low: #131D33;
+  --md-sys-color-surface-container: #1E293B;
+  --md-sys-color-surface-container-high: #273549;
+  --md-sys-color-surface-container-highest: #334155;
+
+  --md-sys-color-primary: #818CF8;
+  --md-sys-color-on-primary: #0B1120;
+  --md-sys-color-primary-container: #312E81;
+  --md-sys-color-on-primary-container: #E0E7FF;
+
+  --md-sys-color-secondary: #94A3B8;
+  --md-sys-color-on-secondary: #0B1120;
+  --md-sys-color-secondary-container: #1E293B;
+  --md-sys-color-on-secondary-container: #F1F5F9;
+
+  --md-sys-color-tertiary: #2DD4BF;
+  --md-sys-color-on-tertiary: #042F2E;
+  --md-sys-color-tertiary-container: #134E4A;
+  --md-sys-color-on-tertiary-container: #CCFBF1;
+
+  --md-sys-color-outline: #334155;
+  --md-sys-color-outline-variant: #1E293B;
+  --md-sys-color-error: #F87171;
+  --md-sys-color-on-error: #450A0A;
+  --md-sys-color-error-container: #7F1D1D;
+  --md-sys-color-on-error-container: #FEE2E2;
+}
+
+/* Material Design 3 Dark Mode Overrides */
+.dark body {
+  background-color: #0B1120;
+  color: #F8FAFC;
+}
+
+.dark .bg-white {
+  background-color: #131D33 !important;
+}
+
+.dark .text-slate-900,
+.dark .text-slate-800,
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: #F8FAFC !important;
+}
+
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-gray-700,
+.dark .text-gray-600 {
+  color: #94A3B8 !important;
+}
+
+.dark .border-m3-outline-variant,
+.dark .border-m3-outline-variant\/40,
+.dark .border-m3-outline-variant\/50,
+.dark .border-m3-outline-variant\/60,
+.dark .border-m3-outline-variant\/80 {
+  border-color: #273549 !important;
+}
+
+.dark .bg-slate-50,
+.dark .bg-slate-100 {
+  background-color: #1E293B !important;
+}
+
+.dark input[type="text"],
+.dark input[type="date"],
+.dark input[type="time"],
+.dark input[type="password"],
+.dark select,
+.dark textarea {
+  color-scheme: dark;
+}
+
 @theme {
   --color-m3-surface: var(--md-sys-color-surface);
   --color-m3-on-surface: var(--md-sys-color-on-surface);

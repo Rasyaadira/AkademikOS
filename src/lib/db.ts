@@ -189,11 +189,44 @@ try {
   if (!profCols.some((c) => c.name === "ai_token_usage")) {
     db.exec("ALTER TABLE profile ADD COLUMN ai_token_usage INTEGER DEFAULT 0;");
   }
+  if (!profCols.some((c) => c.name === "dark_mode")) {
+    db.exec("ALTER TABLE profile ADD COLUMN dark_mode INTEGER DEFAULT 0;");
+  }
+  if (!profCols.some((c) => c.name === "opencode_api_key")) {
+    db.exec("ALTER TABLE profile ADD COLUMN opencode_api_key TEXT;");
+  }
+  if (!profCols.some((c) => c.name === "opencode_base_url")) {
+    db.exec("ALTER TABLE profile ADD COLUMN opencode_base_url TEXT DEFAULT 'https://api.opencode.ai/v1';");
+  }
+  if (!profCols.some((c) => c.name === "opencode_model")) {
+    db.exec("ALTER TABLE profile ADD COLUMN opencode_model TEXT DEFAULT 'opencode/gpt-4o';");
+  }
   // Bersihkan nilai dummy NIM lama jika ada
   db.exec("UPDATE profile SET nim = '' WHERE nim = '23/------/TK/00000';");
   db.exec("UPDATE users SET nim = '' WHERE nim = '23/------/TK/00000';");
 } catch (e) {
   console.log("Migration check profile:", e);
+}
+
+try {
+  const quizCols: any[] = db.prepare("PRAGMA table_info(ai_quizzes)").all();
+  if (!quizCols.some((c) => c.name === "quiz_type")) {
+    db.exec("ALTER TABLE ai_quizzes ADD COLUMN quiz_type TEXT DEFAULT 'quiz';");
+  }
+  if (!quizCols.some((c) => c.name === "source_type")) {
+    db.exec("ALTER TABLE ai_quizzes ADD COLUMN source_type TEXT DEFAULT 'catatan';");
+  }
+  if (!quizCols.some((c) => c.name === "source_title")) {
+    db.exec("ALTER TABLE ai_quizzes ADD COLUMN source_title TEXT;");
+  }
+  if (!quizCols.some((c) => c.name === "session_state")) {
+    db.exec("ALTER TABLE ai_quizzes ADD COLUMN session_state TEXT;");
+  }
+  if (!quizCols.some((c) => c.name === "expires_at")) {
+    db.exec("ALTER TABLE ai_quizzes ADD COLUMN expires_at DATETIME;");
+  }
+} catch (e) {
+  console.log("Migration check ai_quizzes:", e);
 }
 
 try {

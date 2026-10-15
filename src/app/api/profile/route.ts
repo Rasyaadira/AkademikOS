@@ -27,6 +27,10 @@ export async function GET(req: Request) {
         noAiMode: false,
         semesterStartDate: "2026-09-07",
         aiTokenUsage: 0,
+        darkMode: false,
+        openCodeApiKey: "",
+        openCodeBaseUrl: "https://api.opencode.ai/v1",
+        openCodeModel: "opencode/gpt-4o",
       });
     }
 
@@ -46,6 +50,10 @@ export async function GET(req: Request) {
       noAiMode: !!profile.no_ai_mode,
       semesterStartDate: profile.semester_start_date || "2026-09-07",
       aiTokenUsage: profile.ai_token_usage || 0,
+      darkMode: !!profile.dark_mode,
+      openCodeApiKey: profile.opencode_api_key || "",
+      openCodeBaseUrl: profile.opencode_base_url || "https://api.opencode.ai/v1",
+      openCodeModel: profile.opencode_model || "opencode/gpt-4o",
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -71,13 +79,21 @@ export async function PUT(req: Request) {
       noAiMode = false,
       semesterStartDate = "2026-09-07",
       aiTokenUsage = 0,
+      darkMode = false,
+      openCodeApiKey = "",
+      openCodeBaseUrl = "https://api.opencode.ai/v1",
+      openCodeModel = "opencode/gpt-4o",
     } = body;
 
     const cleanNim = nim === "23/------/TK/00000" ? "" : nim;
 
     db.prepare(`
-      INSERT OR REPLACE INTO profile (user_id, name, nim, email, major, faculty, university, semester, academic_advisor, target_gpa, max_sks, photo_url, no_ai_mode, semester_start_date, ai_token_usage)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO profile (
+        user_id, name, nim, email, major, faculty, university, semester, 
+        academic_advisor, target_gpa, max_sks, photo_url, no_ai_mode, 
+        semester_start_date, ai_token_usage, dark_mode, opencode_api_key, opencode_base_url, opencode_model
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       name,
@@ -93,7 +109,11 @@ export async function PUT(req: Request) {
       photoUrl,
       noAiMode ? 1 : 0,
       semesterStartDate,
-      aiTokenUsage
+      aiTokenUsage,
+      darkMode ? 1 : 0,
+      openCodeApiKey,
+      openCodeBaseUrl,
+      openCodeModel
     );
 
     // Also update users table name and avatar

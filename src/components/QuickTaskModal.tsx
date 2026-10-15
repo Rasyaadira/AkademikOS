@@ -9,6 +9,7 @@ interface QuickTaskModalProps {
   onClose: () => void;
   onAddTask: (task: TaskItem) => void;
   courses?: string[];
+  semesterStartDate?: string;
 }
 
 export default function QuickTaskModal({
@@ -16,6 +17,7 @@ export default function QuickTaskModal({
   onClose,
   onAddTask,
   courses = [],
+  semesterStartDate,
 }: QuickTaskModalProps) {
   const availableCourses = courses && courses.length > 0 ? courses : [
     "Matematika Diskrit",
@@ -36,21 +38,59 @@ export default function QuickTaskModal({
   const [difficulty, setDifficulty] = useState<"mudah" | "sedang" | "sulit">("sedang");
   const [taskType, setTaskType] = useState<"tugas" | "ulangan" | "kuis">("tugas");
 
+  // Academic week calculation
+  const semesterStart = semesterStartDate
+    ? new Date(semesterStartDate)
+    : new Date(2026, 8, 7);
+  const now = new Date();
+  const currentWeek = Math.max(
+    1,
+    Math.floor((now.getTime() - semesterStart.getTime()) / (7 * 86400000)) + 1
+  );
+
+  // Helper tanggal akhir pekan minggu sekarang (Minggu pekan berjalan)
+  const getEndOfWeekDateStr = () => {
+    const d = new Date();
+    const day = d.getDay();
+    const diffToSunday = day === 0 ? 0 : 7 - day;
+    const endOfWeek = new Date(d);
+    endOfWeek.setDate(d.getDate() + diffToSunday);
+    const yyyy = endOfWeek.getFullYear();
+    const mm = String(endOfWeek.getMonth() + 1).padStart(2, "0");
+    const dd = String(endOfWeek.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const getTodayDateStr = () => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const getTomorrowDateStr = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const [dueDate, setDueDate] = useState(getEndOfWeekDateStr());
+  const [dueTime, setDueTime] = useState("23:59");
+
   React.useEffect(() => {
-    if (availableCourses.length > 0 && !isCustomCourse) {
-      if (!course || !availableCourses.includes(course)) {
-        setCourse(availableCourses[0]);
+    if (isOpen) {
+      setDueDate(getEndOfWeekDateStr());
+      if (availableCourses.length > 0 && !isCustomCourse) {
+        if (!course || !availableCourses.includes(course)) {
+          setCourse(availableCourses[0]);
+        }
       }
     }
-  }, [courses, isOpen]);
-
-  // Default to tomorrow 23:59
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const defaultDateStr = tomorrow.toISOString().split("T")[0];
-
-  const [dueDate, setDueDate] = useState(defaultDateStr);
-  const [dueTime, setDueTime] = useState("23:59");
+  }, [isOpen, courses]);
 
   if (!isOpen) return null;
 
@@ -164,7 +204,7 @@ export default function QuickTaskModal({
                     : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
                 }`}
               >
-                <span>📝 Tugas</span>
+                <span>Tugas</span>
               </button>
               <button
                 type="button"
@@ -175,7 +215,7 @@ export default function QuickTaskModal({
                     : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
                 }`}
               >
-                <span>🎯 Ulangan</span>
+                <span>Ulangan</span>
               </button>
               <button
                 type="button"
@@ -186,7 +226,7 @@ export default function QuickTaskModal({
                     : "bg-m3-surface-container text-m3-secondary border-m3-outline-variant hover:bg-m3-surface-container-high"
                 }`}
               >
-                <span>⚡ Kuis</span>
+                <span>Kuis</span>
               </button>
             </div>
           </div>
@@ -290,6 +330,44 @@ export default function QuickTaskModal({
                   className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none"
                 />
               </div>
+            </div>
+
+            {/* Quick Date Pills: Default Minggu Sekarang */}
+            <div className="flex items-center gap-1.5 pt-1 overflow-x-auto no-scrollbar">
+              <span className="text-[10px] text-m3-secondary font-medium flex-shrink-0">Pilih Cepat:</span>
+              <button
+                type="button"
+                onClick={() => setDueDate(getEndOfWeekDateStr())}
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all flex-shrink-0 cursor-pointer ${
+                  dueDate === getEndOfWeekDateStr()
+                    ? "bg-m3-primary text-m3-on-primary border-m3-primary shadow-2xs"
+                    : "bg-white text-m3-on-surface border-m3-outline-variant hover:bg-m3-surface-container"
+                }`}
+              >
+                Minggu Sekarang (Minggu {currentWeek})
+              </button>
+              <button
+                type="button"
+                onClick={() => setDueDate(getTodayDateStr())}
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all flex-shrink-0 cursor-pointer ${
+                  dueDate === getTodayDateStr()
+                    ? "bg-m3-primary text-m3-on-primary border-m3-primary shadow-2xs"
+                    : "bg-white text-m3-on-surface border-m3-outline-variant hover:bg-m3-surface-container"
+                }`}
+              >
+                Hari Ini
+              </button>
+              <button
+                type="button"
+                onClick={() => setDueDate(getTomorrowDateStr())}
+                className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all flex-shrink-0 cursor-pointer ${
+                  dueDate === getTomorrowDateStr()
+                    ? "bg-m3-primary text-m3-on-primary border-m3-primary shadow-2xs"
+                    : "bg-white text-m3-on-surface border-m3-outline-variant hover:bg-m3-surface-container"
+                }`}
+              >
+                Besok
+              </button>
             </div>
           </div>
 

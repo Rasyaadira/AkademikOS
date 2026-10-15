@@ -1,16 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  Sparkles,
-  User,
-  GraduationCap,
-  Calendar,
-  Building,
-  CheckCircle2,
-  X,
-  ArrowRight,
-} from "lucide-react";
+import { X, ArrowRight } from "lucide-react";
 import { StudentProfile } from "./OtherViews";
 
 interface FirstTimeOnboardingModalProps {
@@ -86,21 +77,12 @@ export default function FirstTimeOnboardingModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-4 border-b border-m3-outline-variant/60 pb-4">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-m3-primary/10 text-m3-primary text-[11px] font-bold">
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Inisialisasi Pertama Kali</span>
-            </div>
-            <h2 className="text-lg font-bold text-m3-on-surface">
-              Selamat Datang di AkademikOS
-            </h2>
-            <p className="text-xs text-m3-secondary leading-relaxed">
-              Konfigurasikan profil awal Anda untuk menyelaraskan jadwal, kalender akademik, dan pemantauan tugas perkuliahan.
-            </p>
-          </div>
+      <div className="bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-5 shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+        {/* Header Bersih Tanpa Slop */}
+        <div className="flex items-center justify-between border-b border-m3-outline-variant/60 pb-3">
+          <h2 className="text-base font-bold text-m3-on-surface">
+            Selamat Datang di AkademikOS
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -115,9 +97,8 @@ export default function FirstTimeOnboardingModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Nama Mahasiswa */}
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-m3-primary" />
-              <span>Nama Lengkap / Panggilan Mahasiswa *</span>
+            <label className="text-xs font-semibold text-m3-on-surface">
+              Nama Mahasiswa *
             </label>
             <input
               type="text"
@@ -130,10 +111,9 @@ export default function FirstTimeOnboardingModal({
           </div>
 
           {/* Semester Saat Ini */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5">
-              <GraduationCap className="w-3.5 h-3.5 text-m3-primary" />
-              <span>Semester Saat Ini *</span>
+          <div className="space-y-1.5">
+            <label className="text-xs font-semibold text-m3-on-surface">
+              Semester *
             </label>
             <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
               {[1, 2, 3, 4, 5, 6, 7, 8].map((s) => (
@@ -153,77 +133,57 @@ export default function FirstTimeOnboardingModal({
             </div>
           </div>
 
-          {/* Pengaturan Kalender Semester (Anggap Pekan Ini Minggu Ke-1) */}
-          <div className="p-3.5 rounded-2xl bg-m3-surface-container/60 border border-m3-outline-variant space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-m3-primary" />
-                <span>Sinkronisasi Minggu Perkuliahan</span>
-              </span>
-              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800">
-                Otomatis
-              </span>
-            </div>
-
-            <label className="flex items-start gap-2.5 p-2 rounded-xl bg-white dark:bg-m3-surface-container border border-m3-outline-variant/60 cursor-pointer">
+          {/* Opsi Jadikan Hari Ini Minggu Pertama */}
+          <div className="space-y-2 pt-1">
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={isCurrentWeekWeekOne}
                 onChange={(e) => setIsCurrentWeekWeekOne(e.target.checked)}
-                className="mt-0.5 accent-m3-primary w-4 h-4 cursor-pointer"
+                className="accent-m3-primary w-4 h-4 rounded cursor-pointer"
               />
-              <div className="space-y-0.5">
-                <span className="text-xs font-bold text-m3-on-surface block">
-                  Jadikan pekan ini sebagai Minggu Ke-1 (Pertemuan 1)
-                </span>
-                <p className="text-[11px] text-m3-on-surface-variant leading-snug">
-                  Sistem akan menyelaraskan tanggal mulai semester ke awal pekan ini ({getMondayCurrentWeek()}), sehingga kalender perkuliahan dan RPS dimulai tepat di Pertemuan 1.
-                </p>
-              </div>
+              <span className="text-xs font-semibold text-m3-on-surface">
+                Jadikan hari ini minggu pertama
+              </span>
             </label>
 
             {!isCurrentWeekWeekOne && (
-              <div className="space-y-1 pt-1">
-                <label className="text-[11px] font-semibold text-m3-secondary">
-                  Pilih Tanggal Mulai Semester Secara Manual:
-                </label>
+              <div className="space-y-1 pl-6 pt-1 animate-in fade-in duration-150">
                 <input
                   type="date"
                   value={customStartDate}
                   onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface"
+                  className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                 />
               </div>
             )}
           </div>
 
           {/* Detail Opsional: Kampus & Jurusan */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-m3-outline-variant/40">
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-m3-secondary flex items-center gap-1">
-                <Building className="w-3 h-3 text-m3-secondary" />
-                <span>Program Studi (Opsional)</span>
+              <label className="text-[11px] font-semibold text-m3-secondary">
+                Program Studi (Opsional)
               </label>
               <input
                 type="text"
                 value={major}
                 onChange={(e) => setMajor(e.target.value)}
                 placeholder="Contoh: Teknik Informatika"
-                className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface placeholder:text-m3-secondary"
+                className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface placeholder:text-m3-secondary focus:outline-none focus:ring-2 focus:ring-m3-primary"
               />
             </div>
 
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-m3-secondary flex items-center gap-1">
-                <Building className="w-3 h-3 text-m3-secondary" />
-                <span>Perguruan Tinggi (Opsional)</span>
+              <label className="text-[11px] font-semibold text-m3-secondary">
+                Perguruan Tinggi (Opsional)
               </label>
               <input
                 type="text"
                 value={university}
                 onChange={(e) => setUniversity(e.target.value)}
                 placeholder="Contoh: Universitas Gadjah Mada"
-                className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface placeholder:text-m3-secondary"
+                className="w-full px-3 py-2 rounded-xl bg-m3-surface-container border border-m3-outline text-xs text-m3-on-surface placeholder:text-m3-secondary focus:outline-none focus:ring-2 focus:ring-m3-primary"
               />
             </div>
           </div>

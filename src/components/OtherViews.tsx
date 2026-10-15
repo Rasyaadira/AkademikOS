@@ -62,9 +62,6 @@ export interface StudentProfile {
   semesterStartDate?: string;
   aiTokenUsage?: number;
   darkMode?: boolean;
-  openCodeApiKey?: string;
-  openCodeBaseUrl?: string;
-  openCodeModel?: string;
 }
 
 export interface CourseLecturerItem {
@@ -186,13 +183,6 @@ export default function OtherViews({
   const [selectedFileId, setSelectedFileId] = useState<string>("");
   const [rpsSearchQuery, setRpsSearchQuery] = useState("");
   const [rawUploadedDocs, setRawUploadedDocs] = useState<any[]>([]);
-  const [showOpenCodeKey, setShowOpenCodeKey] = useState(false);
-  const [openCodeTestStatus, setOpenCodeTestStatus] = useState<{
-    tested: boolean;
-    loading: boolean;
-    success?: boolean;
-    message?: string;
-  }>({ tested: false, loading: false });
 
   // Load persistent documents from SQLite on mount
   React.useEffect(() => {
@@ -1678,107 +1668,7 @@ export default function OtherViews({
                 </label>
               </div>
 
-              {/* Integrasi OpenCode AI API */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-m3-surface-container/30 border border-m3-outline-variant/60 space-y-3">
-                <div className="flex items-center justify-between pb-1 border-b border-m3-outline-variant/50">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-m3-primary" />
-                    <h4 className="text-xs font-bold text-m3-on-surface">Integrasi OpenCode AI API</h4>
-                  </div>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    formData.openCodeApiKey ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
-                  }`}>
-                    {formData.openCodeApiKey ? "Terhubung" : "Menunggu API Key"}
-                  </span>
-                </div>
-                <p className="text-[11px] text-m3-secondary leading-relaxed">
-                  Hubungkan AkademikOS dengan endpoint OpenCode AI untuk asisten akademik otonom dan analisis cerdas.
-                </p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-m3-on-surface">Base URL OpenCode</label>
-                    <input
-                      type="text"
-                      value={formData.openCodeBaseUrl || "https://api.opencode.ai/v1"}
-                      onChange={(e) => handleInputChange("openCodeBaseUrl", e.target.value)}
-                      placeholder="https://api.opencode.ai/v1"
-                      className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface font-mono"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-m3-on-surface">Model OpenCode</label>
-                    <input
-                      type="text"
-                      value={formData.openCodeModel || "opencode/gpt-4o"}
-                      onChange={(e) => handleInputChange("openCodeModel", e.target.value)}
-                      placeholder="opencode/gpt-4o atau opencode/claude-3-5-sonnet"
-                      className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface font-mono"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11px] font-semibold text-m3-on-surface">API Key OpenCode</label>
-                    <span className="text-[10px] text-m3-secondary italic">Disimpan aman di database lokal</span>
-                  </div>
-                  <div className="relative">
-                    <input
-                      type={showOpenCodeKey ? "text" : "password"}
-                      value={formData.openCodeApiKey || ""}
-                      onChange={(e) => handleInputChange("openCodeApiKey", e.target.value)}
-                      placeholder="sk-opencode-... (isi saat siap digunakan)"
-                      className="w-full px-3 py-2 pr-20 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowOpenCodeKey(!showOpenCodeKey)}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold text-m3-secondary hover:text-m3-primary cursor-pointer"
-                    >
-                      {showOpenCodeKey ? "Sembunyikan" : "Lihat"}
-                    </button>
-                  </div>
-                </div>
-                {/* Test Connection Button */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
-                  <button
-                    type="button"
-                    disabled={openCodeTestStatus.loading}
-                    onClick={async () => {
-                      setOpenCodeTestStatus({ tested: true, loading: true });
-                      try {
-                        const res = await fetch("/api/ai/opencode", {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ action: "test" }),
-                        });
-                        const data = await res.json();
-                        setOpenCodeTestStatus({
-                          tested: true,
-                          loading: false,
-                          success: !!data.success,
-                          message: data.message,
-                        });
-                      } catch (err: any) {
-                        setOpenCodeTestStatus({
-                          tested: true,
-                          loading: false,
-                          success: false,
-                          message: `Kesalahan jaringan: ${err.message}`,
-                        });
-                      }
-                    }}
-                    className="px-3.5 py-1.5 rounded-xl border border-m3-outline text-xs font-semibold hover:bg-m3-surface-container transition-all cursor-pointer inline-flex items-center gap-1.5 self-start"
-                  >
-                    <Sparkles className="w-3.5 h-3.5 text-m3-primary" />
-                    <span>{openCodeTestStatus.loading ? "Menguji..." : "Tes Koneksi OpenCode"}</span>
-                  </button>
-                  {openCodeTestStatus.tested && (
-                    <span className={`text-[11px] font-medium ${openCodeTestStatus.success ? "text-emerald-600" : "text-amber-600"}`}>
-                      {openCodeTestStatus.message}
-                    </span>
-                  )}
-                </div>
-              </div>
+
 
               {/* Zona Bahaya: Reset Bersih */}
               <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 space-y-2">

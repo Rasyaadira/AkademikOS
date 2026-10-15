@@ -67,27 +67,27 @@ interface ScheduleCalendarProps {
 const getCourseBadgeColor = (courseName: string) => {
   const name = courseName.toLowerCase();
   if (name.includes("buatan") || name.includes("ai")) {
-    return "bg-[#9DACFF]/30 text-[#1E293B] border-[#9DACFF] hover:bg-[#9DACFF]/40";
+    return "bg-[#9DACFF]/30 text-[#1E293B] border-[#9DACFF] hover:bg-[#9DACFF]/40 dark:bg-indigo-950/70 dark:text-indigo-200 dark:border-indigo-600/60 dark:hover:bg-indigo-950/90";
   }
   if (name.includes("operasi") || name.includes("os")) {
-    return "bg-[#5B616A]/20 text-[#1E293B] border-[#5B616A]/40 hover:bg-[#5B616A]/30";
+    return "bg-[#5B616A]/20 text-[#1E293B] border-[#5B616A]/40 hover:bg-[#5B616A]/30 dark:bg-slate-800/80 dark:text-slate-200 dark:border-slate-600/60 dark:hover:bg-slate-800";
   }
   if (name.includes("rekayasa") || name.includes("rpl") || name.includes("software")) {
-    return "bg-[#CBF7ED] text-[#0F766E] border-[#6EE7B7] hover:bg-[#A7F3D0]";
+    return "bg-[#CBF7ED] text-[#0F766E] border-[#6EE7B7] hover:bg-[#A7F3D0] dark:bg-emerald-950/70 dark:text-emerald-200 dark:border-emerald-600/60 dark:hover:bg-emerald-950/90";
   }
   if (name.includes("basis data") || name.includes("database")) {
-    return "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200";
+    return "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200 dark:bg-amber-950/70 dark:text-amber-200 dark:border-amber-600/60 dark:hover:bg-amber-950/90";
   }
   if (name.includes("jaringan") || name.includes("network")) {
-    return "bg-indigo-100 text-indigo-900 border-indigo-200 hover:bg-indigo-200";
+    return "bg-indigo-100 text-indigo-900 border-indigo-200 hover:bg-indigo-200 dark:bg-blue-950/70 dark:text-blue-200 dark:border-blue-600/60 dark:hover:bg-blue-950/90";
   }
   if (name.includes("etika") || name.includes("komunikasi")) {
-    return "bg-rose-100 text-rose-900 border-rose-200 hover:bg-rose-200";
+    return "bg-rose-100 text-rose-900 border-rose-200 hover:bg-rose-200 dark:bg-rose-950/70 dark:text-rose-200 dark:border-rose-600/60 dark:hover:bg-rose-950/90";
   }
   if (name.includes("objek") || name.includes("pbo")) {
-    return "bg-purple-100 text-purple-900 border-purple-200 hover:bg-purple-200";
+    return "bg-purple-100 text-purple-900 border-purple-200 hover:bg-purple-200 dark:bg-purple-950/70 dark:text-purple-200 dark:border-purple-600/60 dark:hover:bg-purple-950/90";
   }
-  return "bg-slate-100 text-slate-900 border-slate-300 hover:bg-slate-200";
+  return "bg-slate-100 text-slate-900 border-slate-300 hover:bg-slate-200 dark:bg-slate-800/90 dark:text-slate-100 dark:border-slate-700 dark:hover:bg-slate-700/80";
 };
 
 export const QUICK_COURSE_SUGGESTIONS = [
@@ -1009,15 +1009,15 @@ export default function ScheduleCalendar({
                       const isKuis = t.taskType === "kuis";
                       const tagLabel = isUlangan ? "Ulangan" : isKuis ? "Kuis" : "Tugas";
                       const tagClass = isUlangan
-                        ? "border-rose-300 bg-rose-50 text-rose-900"
+                        ? "border-rose-300 bg-rose-50 text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/60 dark:text-rose-200"
                         : isKuis
-                        ? "border-purple-300 bg-purple-50 text-purple-900"
-                        : "border-amber-300 bg-amber-50 text-amber-900";
+                        ? "border-purple-300 bg-purple-50 text-purple-900 dark:border-purple-700/60 dark:bg-purple-950/60 dark:text-purple-200"
+                        : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/60 dark:text-amber-200";
                       const badgeBg = isUlangan
-                        ? "bg-rose-200 text-rose-900"
+                        ? "bg-rose-200 text-rose-900 dark:bg-rose-900/80 dark:text-rose-100"
                         : isKuis
-                        ? "bg-purple-200 text-purple-900"
-                        : "bg-amber-200 text-amber-900";
+                        ? "bg-purple-200 text-purple-900 dark:bg-purple-900/80 dark:text-purple-100"
+                        : "bg-amber-200 text-amber-900 dark:bg-amber-900/80 dark:text-amber-100";
 
                       return (
                         <div
@@ -1033,7 +1033,7 @@ export default function ScheduleCalendar({
                             <span className="font-bold truncate">{t.title}</span>
                             <span className="text-[10px] opacity-75 truncate">({t.course})</span>
                           </div>
-                          <span className="text-[9px] font-semibold px-2 py-0.2 rounded-full bg-white/80 border border-black/10 flex-shrink-0">
+                          <span className="text-[9px] font-semibold px-2 py-0.2 rounded-full bg-white/80 dark:bg-slate-900/80 text-m3-on-surface border border-black/10 dark:border-white/10 flex-shrink-0">
                             {t.deadlineLabel || "23:59"}
                           </span>
                         </div>

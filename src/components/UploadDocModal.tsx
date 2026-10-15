@@ -69,121 +69,75 @@ export default function UploadDocModal({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisFeedback, setAnalysisFeedback] = useState<{ type: "success" | "warning"; message: string } | null>(null);
 
-  const handleAutoAnalyzeAI = () => {
-    if (!selectedFile) return;
+  const handleAutoAnalyzeAI = async (targetFile?: File | null) => {
+    const fileToAnalyze = targetFile || selectedFile;
+    if (!fileToAnalyze) return;
     setIsAnalyzing(true);
     setAnalysisFeedback(null);
-    setTimeout(() => {
-      // Clean filename and break into distinct word tokens
-      const rawName = selectedFile.name.replace(/\.[^/.]+$/, "").toLowerCase();
-      const tokens = rawName.split(/[^a-z0-9]+/i).filter(Boolean);
 
-      // 1. Direct match with registered courses (requires full match or all major course tokens)
-      let matched = courses.find((c) => {
-        const cLower = c.toLowerCase();
-        if (cLower.length >= 5 && rawName.includes(cLower)) return true;
-        const cWords = cLower.split(/[^a-z0-9]+/i).filter((w) => w.length > 3 && !["dan", "untuk", "dari", "pada"].includes(w));
-        return cWords.length > 0 && cWords.every((w) => tokens.includes(w));
+    try {
+      const res = await fetch("/api/ai/analyze-document", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileName: fileToAnalyze.name,
+          fileType: fileToAnalyze.type || "application/pdf",
+          availableCourses: courses,
+          currentWeek,
+        }),
       });
 
-      // 2. Specific heuristic match by tokens (NEVER use raw substring on 2-letter words like 'ui')
-      if (!matched) {
-        const tokenRules: { check: (toks: string[], raw: string) => boolean; target: string }[] = [
-          { check: (t) => t.some((x) => x.startsWith("metnum") || x.includes("numerik")), target: "Metode Numerik" },
-          { check: (t) => t.some((x) => x.startsWith("strukdat") || x.includes("struktur")), target: "Struktur Data" },
-          { check: (t) => t.some((x) => x.startsWith("basdat") || x.includes("database") || x === "sql"), target: "Pemrograman Basis Data" },
-          { check: (t) => t.some((x) => x.startsWith("jarkom") || x.includes("jaringan") || x.includes("network")), target: "Jaringan Komputer" },
-          { check: (t) => t.includes("os") || t.some((x) => x.includes("operasi")), target: "Sistem Operasi" },
-          { check: (t) => t.includes("rpl") || t.some((x) => x.includes("software")), target: "Rekayasa Perangkat Lunak" },
-          { check: (t) => t.includes("ai") || t.some((x) => x.includes("buatan") || x.includes("artificial")), target: "Kecerdasan Buatan" },
-          { check: (t) => t.includes("pbo") || t.includes("oop") || t.some((x) => x.includes("berorientasi")), target: "Pemrograman Berorientasi Objek" },
-          { check: (t) => t.some((x) => x.includes("kalkulus")), target: "Kalkulus" },
-          { check: (t) => t.some((x) => x.includes("aljabar") || x.includes("linear")), target: "Aljabar Linear" },
-          { check: (t) => t.some((x) => x.startsWith("algo") || x.startsWith("daspro")), target: "Algoritma & Pemrograman" },
-          { check: (t) => t.some((x) => x.includes("grafik") || x.includes("cg")), target: "Grafika Komputer" },
-          { check: (t) => t.some((x) => x.includes("web") || x.includes("html") || x.includes("frontend")), target: "Pemrograman Web Lanjut" },
-          { check: (t) => t.some((x) => x.includes("proyek") || x.startsWith("manpro") || x.includes("project")), target: "Manajemen Proyek TIK" },
-          { check: (t) => t.some((x) => x.includes("distribusi") || x.startsWith("sister")), target: "Sistem Terdistribusi" },
-          { check: (t) => t.some((x) => x.includes("visual")), target: "Pemrograman Visual" },
-          { check: (t) => t.includes("adsi") || (t.includes("analisis") && t.includes("sistem")), target: "Analisis dan Desain Sistem Informasi" },
-          { check: (t) => t.includes("ui") || t.includes("ux") || t.includes("uiux") || t.includes("figma") || t.some((x) => x.includes("desain")), target: "Desain UI/UX" },
-          { check: (t) => t.some((x) => x.includes("etika")), target: "Etika Profesi" },
-        ];
-
-        for (const rule of tokenRules) {
-          if (rule.check(tokens, rawName)) {
-            const existingSimilar = courses.find((c) =>
-              c.toLowerCase().includes(rule.target.toLowerCase()) ||
-              rule.target.toLowerCase().includes(c.toLowerCase())
+      if (res.ok) {
+        const data = await res.json();
+        const analysis = data.analysis;
+        if (analysis) {
+          if (analysis.course) {
+            setSelectedCourse(analysis.course);
+            const isKnown = courses.some(
+              (c) => c.toLowerCase() === analysis.course.toLowerCase()
             );
-            matched = existingSimilar || rule.target;
-            break;
+            setIsCustomCourse(!isKnown);
+            if (!isKnown) {
+              setCustomCourseName(analysis.course);
+            }
           }
+
+          if (analysis.docType) {
+            setDocType(analysis.docType);
+          }
+
+          if (analysis.sessionNo !== undefined) {
+            setSessionNo(analysis.sessionNo);
+          }
+
+          if (analysis.topic) {
+            setTopic(analysis.topic);
+          }
+
+          setAnalysisFeedback({
+            type: "success",
+            message:
+              analysis.explanation ||
+              `AI DeepSeek mengidentifikasi berkas untuk ${analysis.course}.`,
+          });
+          return;
         }
       }
-
-      // 3. Match docType
-      let detectedDocType: "rps" | "slide" | "tugas" | "praktikum" | "lainnya" = "slide";
-      if (rawName.includes("rps") || rawName.includes("silabus") || rawName.includes("kurikulum")) {
-        detectedDocType = "rps";
-        setDocType("rps");
-        setSessionNo("all");
-      } else if (rawName.includes("tugas") || rawName.includes("quiz") || rawName.includes("kuis") || rawName.includes("soal") || rawName.includes("assignment")) {
-        detectedDocType = "tugas";
-        setDocType("tugas");
-      } else if (rawName.includes("praktikum") || rawName.includes("lab") || rawName.includes("modul")) {
-        detectedDocType = "praktikum";
-        setDocType("praktikum");
-      } else if (rawName.includes("slide") || rawName.includes("ppt") || rawName.includes("materi")) {
-        detectedDocType = "slide";
-        setDocType("slide");
-      }
-
-      // Check meeting number in filename, otherwise default to currentWeek (minggu sekarang)
-      if (detectedDocType !== "rps") {
-        const matchMeeting = rawName.match(/(?:pertemuan|minggu|sesi|meet|m|tugas|praktikum)[_ -]?(\d{1,2})/i);
-        const detectedNum = matchMeeting ? parseInt(matchMeeting[1], 10) : currentWeek;
-        if (detectedNum >= 1 && detectedNum <= 16) {
-          setSessionNo(detectedNum);
-        } else {
-          setSessionNo(currentWeek);
-        }
-      }
-
-      // Set matched course or leave blank with clear feedback
+      throw new Error("Gagal menerima respons analisis AI.");
+    } catch (e: any) {
+      console.warn("AI Analysis error, using fallback heuristic:", e);
+      const rawName = fileToAnalyze.name.replace(/\.[^/.]+$/, "").toLowerCase();
+      const matched = courses.find((c) => rawName.includes(c.toLowerCase()));
       if (matched) {
         setSelectedCourse(matched);
-        setIsCustomCourse(!courses.includes(matched));
-        if (!courses.includes(matched)) {
-          setCustomCourseName(matched);
-        }
-        setAnalysisFeedback({
-          type: "success",
-          message: `AI mendeteksi mata kuliah: "${matched}" (dapat Anda ubah jika kurang sesuai).`,
-        });
-      } else {
-        // DO NOT FORCE DESAIN UI/UX! Leave empty and request user selection
-        setSelectedCourse("");
-        setIsCustomCourse(false);
-        setCustomCourseName("");
-        setAnalysisFeedback({
-          type: "warning",
-          message: "Mata kuliah belum terdeteksi otomatis dari nama berkas. Silakan pilih salah satu mata kuliah di bawah.",
-        });
       }
-
-      // Match topic title
-      const cleanTopic = selectedFile.name
-        .replace(/\.[^/.]+$/, "")
-        .replace(/^[0-9._\- ]+/, "")
-        .replace(/_/g, " ")
-        .trim();
-      if (cleanTopic && !topic) {
-        setTopic(cleanTopic);
-      }
-
+      setAnalysisFeedback({
+        type: "warning",
+        message: "Analisis AI daring terkendala. Silakan sesuaikan kategori di bawah secara manual.",
+      });
+    } finally {
       setIsAnalyzing(false);
-    }, 700);
+    }
   };
 
   useEffect(() => {
@@ -233,6 +187,10 @@ export default function UploadDocModal({
       } else if (lower.includes("praktikum") || lower.includes("lab") || lower.includes("modul")) {
         setDocType("praktikum");
         setSessionNo(1);
+      }
+
+      if (!noAiMode) {
+        handleAutoAnalyzeAI(file);
       }
     }
   };
@@ -297,13 +255,13 @@ export default function UploadDocModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs"
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-white border border-m3-outline-variant rounded-3xl w-full max-w-xl p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-m3-surface border border-m3-outline-variant rounded-3xl w-full max-w-xl p-6 sm:p-7 space-y-5 shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-m3-outline-variant">
           <div>
             <h3 className="text-base sm:text-lg font-bold text-m3-on-surface">
               {currentStep === "pick" ? "Unggah Dokumen Perkuliahan" : "Inspeksi & Penempatan Berkas"}
@@ -316,7 +274,7 @@ export default function UploadDocModal({
           </div>
           <button
             onClick={handleClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-m3-secondary hover:bg-m3-surface-container transition-colors"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-m3-secondary hover:bg-m3-surface-container transition-colors cursor-pointer"
             aria-label="Tutup dialog"
           >
             <X className="w-4 h-4" />
@@ -390,18 +348,18 @@ export default function UploadDocModal({
 
             {/* AI Assistant Question Box */}
             {!noAiMode && (
-              <div className="p-4 rounded-2xl bg-indigo-50/70 border border-indigo-100 space-y-3">
+              <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800/80 space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-900">
-                    <Sparkles className="w-4 h-4 text-indigo-600" />
-                    <span>Rekomendasi Penempatan Dokumen (AI Routing)</span>
+                  <div className="flex items-center gap-2 text-xs font-bold text-indigo-900 dark:text-indigo-200">
+                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Rekomendasi Penempatan Dokumen (DeepSeek AI)</span>
                   </div>
                   <button
                     type="button"
-                    onClick={handleAutoAnalyzeAI}
+                    onClick={() => handleAutoAnalyzeAI()}
                     disabled={isAnalyzing}
                     className="px-3.5 py-1.5 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs disabled:opacity-60 cursor-pointer"
-                    title="Jalankan analisis AI otomatis untuk mendeteksi mata kuliah dan pertemuan"
+                    title="Jalankan analisis AI DeepSeek untuk mendeteksi mata kuliah, topik, dan pertemuan"
                   >
                     {isAnalyzing ? (
                       <>
@@ -411,36 +369,36 @@ export default function UploadDocModal({
                     ) : (
                       <>
                         <Sparkles className="w-3.5 h-3.5" />
-                        <span>Analisis & Auto-Isi AI</span>
+                        <span>Analisis Ulang AI</span>
                       </>
                     )}
                   </button>
                 </div>
                 {isAnalyzing ? (
-                  <div className="p-2.5 rounded-xl bg-white/90 border border-indigo-200 text-xs text-indigo-900 flex items-center gap-2.5 animate-pulse">
-                    <div className="w-2 h-2 rounded-full bg-indigo-600 animate-ping" />
+                  <div className="p-2.5 rounded-xl bg-white/90 dark:bg-m3-surface-container border border-indigo-200 dark:border-indigo-800 text-xs text-indigo-900 dark:text-indigo-200 flex items-center gap-2.5 animate-pulse">
+                    <div className="w-2 h-2 rounded-full bg-indigo-600 dark:bg-indigo-400 animate-ping" />
                     <span className="font-medium">
-                      AI sedang memindai isi dokumen dan mencocokkan dengan daftar mata kuliah Anda...
+                      DeepSeek AI sedang memindai isi dokumen dan mencocokkan mata kuliah serta topiknya...
                     </span>
                   </div>
                 ) : analysisFeedback ? (
                   <div
                     className={`p-2.5 rounded-xl text-xs flex items-start gap-2 border animate-in fade-in ${
                       analysisFeedback.type === "success"
-                        ? "bg-emerald-50 text-emerald-900 border-emerald-300"
-                        : "bg-amber-50 text-amber-900 border-amber-300"
+                        ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800"
+                        : "bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800"
                     }`}
                   >
                     {analysisFeedback.type === "success" ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
+                      <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
                     )}
                     <span className="leading-relaxed font-medium">{analysisFeedback.message}</span>
                   </div>
                 ) : (
-                  <p className="text-[11px] text-indigo-950/80 leading-relaxed">
-                    Klik <strong>Analisis & Auto-Isi AI</strong> untuk mengisi kategori dan mata kuliah secara otomatis, atau lengkapi penempatan folder secara manual di bawah.
+                  <p className="text-[11px] text-indigo-950/80 dark:text-indigo-200/80 leading-relaxed">
+                    DeepSeek AI menganalisis berkas ini untuk merekomendasikan mata kuliah dan topik secara otomatis.
                   </p>
                 )}
               </div>
@@ -448,12 +406,12 @@ export default function UploadDocModal({
 
             {/* Empty Course Confirmation Alert */}
             {showEmptyCourseConfirm && (
-              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-2.5 animate-in fade-in">
+              <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 space-y-2.5 animate-in fade-in">
                 <div className="flex items-start gap-2.5">
-                  <AlertCircle className="w-4 h-4 text-amber-700 mt-0.5 flex-shrink-0" />
-                  <div className="text-xs text-amber-950">
+                  <AlertCircle className="w-4 h-4 text-amber-700 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-xs text-amber-950 dark:text-amber-200">
                     <p className="font-bold">Mata kuliah belum dipilih</p>
-                    <p className="text-[11px] text-amber-900/80 mt-0.5">
+                    <p className="text-[11px] text-amber-900/80 dark:text-amber-200/80 mt-0.5">
                       Dokumen akan dikelompokkan ke kategori <strong>Umum / Lainnya</strong>. Apakah ingin memilih mata kuliah terlebih dahulu?
                     </p>
                   </div>
@@ -492,7 +450,7 @@ export default function UploadDocModal({
                         setSelectedCourse(e.target.value);
                         if (showEmptyCourseConfirm) setShowEmptyCourseConfirm(false);
                       }}
-                      className="flex-1 px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                      className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-m3-surface-container border border-m3-outline dark:border-m3-outline-variant text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                     >
                       <option value="">-- Pilih Mata Kuliah (Bisa Dikosongkan) --</option>
                       {courses.map((c) => (
@@ -510,13 +468,13 @@ export default function UploadDocModal({
                         if (showEmptyCourseConfirm) setShowEmptyCourseConfirm(false);
                       }}
                       placeholder="Ketik nama mata kuliah baru..."
-                      className="flex-1 px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                      className="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-m3-surface-container border border-m3-outline dark:border-m3-outline-variant text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                     />
                   )}
                   <button
                     type="button"
                     onClick={() => setIsCustomCourse(!isCustomCourse)}
-                    className="px-3 py-2 rounded-xl border border-m3-outline-variant bg-m3-surface-container text-[11px] font-semibold text-m3-secondary hover:text-m3-on-surface transition-colors flex-shrink-0"
+                    className="px-3 py-2 rounded-xl border border-m3-outline-variant bg-m3-surface-container dark:bg-m3-surface-container/60 text-[11px] font-semibold text-m3-secondary hover:text-m3-on-surface transition-colors flex-shrink-0 cursor-pointer"
                   >
                     {isCustomCourse ? "Pilih dari List" : "+ Matkul Baru"}
                   </button>
@@ -536,7 +494,7 @@ export default function UploadDocModal({
                       setDocType(val);
                       if (val === "rps") setSessionNo("all");
                     }}
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-m3-surface-container border border-m3-outline dark:border-m3-outline-variant text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary cursor-pointer"
                   >
                     <option value="rps">RPS & Silabus Resmi</option>
                     <option value="slide">Slide Bahan Ajar</option>
@@ -560,7 +518,7 @@ export default function UploadDocModal({
                     onChange={(e) =>
                       setSessionNo(e.target.value === "all" ? "all" : Number(e.target.value))
                     }
-                    className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                    className="w-full px-3 py-2 rounded-xl bg-white dark:bg-m3-surface-container border border-m3-outline dark:border-m3-outline-variant text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary cursor-pointer"
                   >
                     <option value="all">Umum / Seluruh Semester</option>
                     {Array.from({ length: 16 }, (_, i) => i + 1).map((n) => (
@@ -582,7 +540,7 @@ export default function UploadDocModal({
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
                   placeholder="Contoh: Pengenalan AI, Algoritma A*, dsb"
-                  className="w-full px-3 py-2 rounded-xl bg-white border border-m3-outline text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
+                  className="w-full px-3 py-2 rounded-xl bg-white dark:bg-m3-surface-container border border-m3-outline dark:border-m3-outline-variant text-xs text-m3-on-surface focus:outline-none focus:ring-2 focus:ring-m3-primary"
                 />
               </div>
             </div>
@@ -590,7 +548,7 @@ export default function UploadDocModal({
         )}
 
         {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-slate-100">
+        <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-m3-outline-variant">
           <button
             type="button"
             onClick={handleClose}

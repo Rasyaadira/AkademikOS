@@ -511,38 +511,40 @@ export default function QuizSection({
               {/* Flip Card */}
               <div
                 onClick={() => setIsFlipped(!isFlipped)}
-                className={`min-h-[240px] p-6 sm:p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-sm ${
+                className={`min-h-[260px] p-6 sm:p-8 rounded-3xl border-2 transition-all cursor-pointer flex flex-col justify-between select-none shadow-sm ${
                   isFlipped
-                    ? "bg-m3-primary/10 border-m3-primary text-m3-on-surface"
-                    : "bg-white dark:bg-m3-surface-container border-m3-outline-variant hover:border-m3-primary text-m3-on-surface"
+                    ? "bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-400 dark:border-indigo-600 text-m3-on-surface"
+                    : "bg-white dark:bg-m3-surface-container border-slate-300 dark:border-slate-700 hover:border-m3-primary text-m3-on-surface"
                 }`}
               >
                 <div className="flex items-center justify-between text-[11px] font-bold">
                   <span
-                    className={`px-2.5 py-0.5 rounded-full ${
-                      isFlipped ? "bg-m3-primary/20 text-m3-primary" : "bg-m3-surface-container text-m3-secondary"
+                    className={`px-3 py-1 rounded-full ${
+                      isFlipped
+                        ? "bg-indigo-200 dark:bg-indigo-900 text-indigo-950 dark:text-indigo-100 font-extrabold"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-extrabold"
                     }`}
                   >
-                    {isFlipped ? "Definisi / Jawaban" : "Konsep / Pertanyaan"}
+                    {isFlipped ? "Definisi / Jawaban (Belakang)" : "Konsep / Pertanyaan (Depan)"}
                   </span>
-                  <span className="text-[10px] text-m3-secondary">Klik kartu untuk membalik</span>
+                  <span className="text-[11px] text-m3-secondary font-semibold">Klik kartu untuk membalik</span>
                 </div>
 
                 <div className="my-auto text-center py-6">
                   {isFlipped ? (
-                    <p className="text-sm sm:text-base font-semibold leading-relaxed whitespace-pre-line">
+                    <p className="text-base sm:text-lg font-semibold leading-relaxed whitespace-pre-line text-m3-on-surface">
                       {activeQuiz.questions[currentQIndex]?.flashcardBack ||
                         activeQuiz.questions[currentQIndex]?.explanation}
                     </p>
                   ) : (
-                    <h4 className="text-lg sm:text-xl font-bold">
+                    <h4 className="text-xl sm:text-2xl font-extrabold text-m3-on-surface">
                       {activeQuiz.questions[currentQIndex]?.flashcardFront ||
                         activeQuiz.questions[currentQIndex]?.question}
                     </h4>
                   )}
                 </div>
 
-                <div className="text-center text-[10px] text-m3-secondary">
+                <div className="text-center text-[11px] text-m3-secondary font-medium">
                   {activeQuiz.questions[currentQIndex]?.source && (
                     <span>Sumber: {activeQuiz.questions[currentQIndex]?.source}</span>
                   )}
@@ -558,7 +560,7 @@ export default function QuizSection({
                     setCurrentQIndex((prev) => prev - 1);
                     setIsFlipped(false);
                   }}
-                  className="px-4 py-2 rounded-xl border border-m3-outline-variant text-xs font-semibold disabled:opacity-30 hover:bg-m3-surface-container flex items-center gap-1 cursor-pointer"
+                  className="px-4 py-2 rounded-xl border-2 border-m3-outline-variant text-xs font-semibold disabled:opacity-30 hover:bg-m3-surface-container flex items-center gap-1 cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                   <span>Sebelumnya</span>
@@ -574,7 +576,7 @@ export default function QuizSection({
                         setIsFlipped(false);
                       }
                     }}
-                    className="px-3.5 py-2 rounded-xl border border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold transition-all cursor-pointer"
+                    className="px-4 py-2 rounded-xl border-2 border-rose-400 dark:border-rose-700 bg-rose-50 dark:bg-rose-950/60 text-rose-950 dark:text-rose-100 text-xs font-extrabold transition-all cursor-pointer hover:bg-rose-100"
                   >
                     Perlu Diulang
                   </button>
@@ -587,9 +589,9 @@ export default function QuizSection({
                         setIsFlipped(false);
                       }
                     }}
-                    className="px-3.5 py-2 rounded-xl border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all cursor-pointer flex items-center gap-1"
+                    className="px-4 py-2 rounded-xl border-2 border-emerald-400 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-950 dark:text-emerald-100 text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1 hover:bg-emerald-100"
                   >
-                    <Check className="w-3.5 h-3.5" />
+                    <Check className="w-4 h-4 stroke-[3]" />
                     <span>Sudah Paham</span>
                   </button>
                 </div>
@@ -601,7 +603,7 @@ export default function QuizSection({
                     setCurrentQIndex((prev) => prev + 1);
                     setIsFlipped(false);
                   }}
-                  className="px-4 py-2 rounded-xl border border-m3-outline-variant text-xs font-semibold disabled:opacity-30 hover:bg-m3-surface-container flex items-center gap-1 cursor-pointer"
+                  className="px-4 py-2 rounded-xl border-2 border-m3-outline-variant text-xs font-semibold disabled:opacity-30 hover:bg-m3-surface-container flex items-center gap-1 cursor-pointer"
                 >
                   <span>Berikutnya</span>
                   <ChevronRight className="w-4 h-4" />
@@ -614,14 +616,16 @@ export default function QuizSection({
           {(activeQuiz.quizType === "quiz" || activeQuiz.quizType === "ulangan") && !isQuizCompleted && (
             <div className="max-w-2xl mx-auto space-y-6">
               {/* Progress */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between text-xs text-m3-secondary font-semibold">
-                  <span>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-m3-on-surface">
+                  <span className="px-3 py-1 rounded-full bg-m3-surface-container border border-m3-outline-variant font-mono">
                     Soal {currentQIndex + 1} dari {activeQuiz.questions.length}
                   </span>
-                  <span>{Object.keys(selectedAnswers).length} Dijawab</span>
+                  <span className="text-m3-secondary">
+                    {Object.keys(selectedAnswers).length} dari {activeQuiz.questions.length} Dijawab
+                  </span>
                 </div>
-                <div className="w-full h-2 rounded-full bg-m3-surface-container overflow-hidden">
+                <div className="w-full h-2.5 rounded-full bg-m3-surface-container overflow-hidden border border-m3-outline-variant/60">
                   <div
                     className="h-full bg-m3-primary transition-all duration-300"
                     style={{
@@ -632,38 +636,47 @@ export default function QuizSection({
               </div>
 
               {/* Question */}
-              <div className="p-5 sm:p-6 rounded-2xl bg-m3-surface-container/30 border border-m3-outline-variant space-y-3">
-                <div className="flex items-center gap-2 text-[10px] text-m3-secondary">
-                  <span className="font-bold px-2 py-0.5 rounded bg-m3-surface-container border border-m3-outline-variant text-m3-on-surface">
-                    {activeQuiz.questions[currentQIndex]?.source || "Materi"}
+              <div className="p-6 rounded-2xl bg-m3-surface-container/40 dark:bg-m3-surface-container/70 border-2 border-m3-outline-variant space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-[11px] px-2.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/80 text-indigo-900 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700">
+                    {activeQuiz.questions[currentQIndex]?.source || "Materi Kuliah"}
                   </span>
                 </div>
-                <h4 className="text-sm sm:text-base font-bold text-m3-on-surface leading-relaxed">
+                <h4 className="text-base sm:text-lg font-bold text-m3-on-surface leading-relaxed">
                   {activeQuiz.questions[currentQIndex]?.question}
                 </h4>
               </div>
 
               {/* Options */}
-              <div className="space-y-2.5">
+              <div className="space-y-3">
                 {activeQuiz.questions[currentQIndex]?.options.map((option, optIdx) => {
                   const isSelected = selectedAnswers[currentQIndex] === optIdx;
                   const isChecked = showAnswer[currentQIndex];
                   const isCorrect = optIdx === activeQuiz.questions[currentQIndex].correctAnswer;
 
-                  let optionStyle =
-                    "bg-white dark:bg-m3-surface-container/60 border-m3-outline-variant hover:border-m3-primary text-m3-on-surface";
+                  let optionClasses =
+                    "bg-white dark:bg-m3-surface-container border-2 border-slate-300 dark:border-slate-700 hover:border-m3-primary hover:bg-slate-50 dark:hover:bg-slate-800 text-m3-on-surface";
+                  let letterBoxClasses =
+                    "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600";
+
                   if (isChecked) {
                     if (isCorrect) {
-                      optionStyle =
-                        "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-950 dark:text-emerald-200 font-bold shadow-2xs";
+                      optionClasses =
+                        "bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-500 text-emerald-950 dark:text-emerald-100 font-bold ring-2 ring-emerald-400/30";
+                      letterBoxClasses = "bg-emerald-600 text-white border-emerald-600 font-extrabold";
                     } else if (isSelected) {
-                      optionStyle =
-                        "bg-rose-50 dark:bg-rose-950/40 border-rose-300 text-rose-950 dark:text-rose-200 shadow-2xs";
+                      optionClasses =
+                        "bg-rose-50 dark:bg-rose-950/60 border-2 border-rose-500 text-rose-950 dark:text-rose-100 font-bold ring-2 ring-rose-400/30";
+                      letterBoxClasses = "bg-rose-600 text-white border-rose-600 font-extrabold";
                     } else {
-                      optionStyle = "opacity-50 border-m3-outline-variant";
+                      optionClasses =
+                        "opacity-50 bg-slate-50/50 dark:bg-slate-900/30 border-2 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400";
+                      letterBoxClasses = "bg-slate-200 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700";
                     }
                   } else if (isSelected) {
-                    optionStyle = "bg-m3-primary/10 border-m3-primary text-m3-primary font-semibold shadow-2xs";
+                    optionClasses =
+                      "bg-indigo-50/70 dark:bg-indigo-950/50 border-2 border-m3-primary text-m3-on-surface font-bold ring-2 ring-m3-primary/30";
+                    letterBoxClasses = "bg-m3-primary text-m3-on-primary border-m3-primary font-extrabold";
                   }
 
                   const letter = ["A", "B", "C", "D"][optIdx] || String(optIdx + 1);
@@ -673,25 +686,32 @@ export default function QuizSection({
                       key={optIdx}
                       type="button"
                       onClick={() => handleSelectOption(optIdx)}
-                      className={`w-full p-3.5 sm:p-4 rounded-2xl border text-left text-xs sm:text-sm flex items-start gap-3 transition-all cursor-pointer ${optionStyle}`}
+                      className={`w-full min-h-[52px] p-4 rounded-2xl text-left text-xs sm:text-sm flex items-center justify-between gap-3.5 transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-m3-primary ${optionClasses}`}
                     >
-                      <span
-                        className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                          isChecked && isCorrect
-                            ? "bg-emerald-500 text-white"
-                            : isChecked && isSelected
-                            ? "bg-rose-500 text-white"
-                            : "bg-m3-surface-container text-m3-on-surface-variant"
-                        }`}
-                      >
-                        {letter}
-                      </span>
-                      <span className="flex-1 leading-relaxed">{option}</span>
-                      {isChecked && isCorrect && (
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
-                      )}
-                      {isChecked && isSelected && !isCorrect && (
-                        <XCircle className="w-5 h-5 text-rose-600 flex-shrink-0 mt-0.5" />
+                      <div className="flex items-start gap-3 min-w-0">
+                        <span
+                          className={`w-7 h-7 rounded-xl text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5 ${letterBoxClasses}`}
+                        >
+                          {letter}
+                        </span>
+                        <span className="flex-1 leading-relaxed text-sm font-medium">{option}</span>
+                      </div>
+
+                      {isChecked && (
+                        <div className="flex-shrink-0 ml-2">
+                          {isCorrect && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold">
+                              <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>Kunci Benar</span>
+                            </span>
+                          )}
+                          {isSelected && !isCorrect && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-600 text-white text-[11px] font-bold">
+                              <XCircle className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>Jawaban Anda</span>
+                            </span>
+                          )}
+                        </div>
                       )}
                     </button>
                   );
@@ -700,12 +720,12 @@ export default function QuizSection({
 
               {/* Explanation */}
               {showAnswer[currentQIndex] && (
-                <div className="p-4 rounded-2xl bg-m3-surface-container/40 border border-m3-outline-variant text-xs space-y-1.5">
-                  <div className="flex items-center gap-1.5 font-bold text-m3-primary">
-                    <HelpCircle className="w-4 h-4" />
-                    <span>Pembahasan:</span>
+                <div className="p-5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/50 border-2 border-indigo-200 dark:border-indigo-800 text-xs sm:text-sm space-y-2 animate-in fade-in">
+                  <div className="flex items-center gap-2 font-extrabold text-indigo-900 dark:text-indigo-200">
+                    <HelpCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>Kunci & Pembahasan Konsep:</span>
                   </div>
-                  <p className="text-m3-on-surface leading-relaxed pl-5">
+                  <p className="text-indigo-950 dark:text-indigo-100 leading-relaxed font-medium pl-6">
                     {activeQuiz.questions[currentQIndex]?.explanation}
                   </p>
                 </div>

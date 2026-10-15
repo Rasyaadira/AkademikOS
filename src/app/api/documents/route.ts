@@ -16,6 +16,8 @@ export async function GET() {
       docType: d.doc_type || "Dokumen Perkuliahan",
       sessionNo: d.session_no ?? undefined,
       topic: d.topic || undefined,
+      previewPath: d.preview_path || (d.file_type === "pdf" ? d.file_path : undefined),
+      originalPath: d.original_path || d.file_path,
       createdAt: d.created_at,
     }));
 
@@ -37,6 +39,8 @@ export async function POST(req: Request) {
       docType = "Dokumen Perkuliahan",
       sessionNo = null,
       topic = "",
+      previewPath = null,
+      originalPath = null,
     } = body;
 
     if (!fileName || !filePath) {
@@ -46,10 +50,15 @@ export async function POST(req: Request) {
       );
     }
 
+    const finalPreviewPath = previewPath || (fileType === "pdf" ? filePath : null);
+    const finalOriginalPath = originalPath || filePath;
+
     db.prepare(`
-      INSERT INTO uploaded_documents (id, course_name, file_name, file_path, file_type, doc_type, session_no, topic)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, course, fileName, filePath, fileType, docType, sessionNo, topic);
+      INSERT INTO uploaded_documents (
+        id, course_name, file_name, file_path, file_type, doc_type, session_no, topic, preview_path, original_path
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, course, fileName, filePath, fileType, docType, sessionNo, topic, finalPreviewPath, finalOriginalPath);
 
     return NextResponse.json({
       success: true,
@@ -58,6 +67,8 @@ export async function POST(req: Request) {
         course,
         fileName,
         filePath,
+        previewPath: finalPreviewPath,
+        originalPath: finalOriginalPath,
         fileType,
         docType,
         sessionNo,

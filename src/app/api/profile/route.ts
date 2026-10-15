@@ -48,6 +48,9 @@ export async function GET(req: Request) {
       semesterStartDate: profile.semester_start_date || "2026-09-07",
       aiTokenUsage: profile.ai_token_usage || 0,
       darkMode: !!profile.dark_mode,
+      opencodeApiKey: profile.opencode_api_key || "",
+      opencodeBaseUrl: profile.opencode_base_url || "https://api.opencode.ai/v1",
+      opencodeModel: profile.opencode_model || "opencode/gpt-4o",
     });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -74,6 +77,9 @@ export async function PUT(req: Request) {
       semesterStartDate = "2026-09-07",
       aiTokenUsage = 0,
       darkMode = false,
+      opencodeApiKey = "",
+      opencodeBaseUrl = "https://api.opencode.ai/v1",
+      opencodeModel = "opencode/gpt-4o",
     } = body;
 
     const cleanNim = nim === "23/------/TK/00000" ? "" : nim;
@@ -82,9 +88,10 @@ export async function PUT(req: Request) {
       INSERT OR REPLACE INTO profile (
         user_id, name, nim, email, major, faculty, university, semester, 
         academic_advisor, target_gpa, max_sks, photo_url, no_ai_mode, 
-        semester_start_date, ai_token_usage, dark_mode
+        semester_start_date, ai_token_usage, dark_mode,
+        opencode_api_key, opencode_base_url, opencode_model
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       name,
@@ -101,7 +108,10 @@ export async function PUT(req: Request) {
       noAiMode ? 1 : 0,
       semesterStartDate,
       aiTokenUsage,
-      darkMode ? 1 : 0
+      darkMode ? 1 : 0,
+      opencodeApiKey,
+      opencodeBaseUrl,
+      opencodeModel
     );
 
     // Also update users table name and avatar

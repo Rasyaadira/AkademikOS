@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { X, Calendar, Clock, BarChart } from "lucide-react";
+import { X, Calendar, Clock, BarChart, Sparkles } from "lucide-react";
 import { TaskItem } from "./ActionDeck";
 
 interface QuickTaskModalProps {
@@ -37,6 +37,7 @@ export default function QuickTaskModal({
   const [customCourseName, setCustomCourseName] = useState("");
   const [difficulty, setDifficulty] = useState<"mudah" | "sedang" | "sulit">("sedang");
   const [taskType, setTaskType] = useState<"tugas" | "ulangan" | "kuis">("tugas");
+  const [examPrepOption, setExamPrepOption] = useState<"none" | "phased">("none");
 
   // Academic week calculation
   const semesterStart = semesterStartDate
@@ -84,6 +85,7 @@ export default function QuickTaskModal({
   React.useEffect(() => {
     if (isOpen) {
       setDueDate(getEndOfWeekDateStr());
+      setExamPrepOption("none");
       if (availableCourses.length > 0 && !isCustomCourse) {
         if (!course || !availableCourses.includes(course)) {
           setCourse(availableCourses[0]);
@@ -145,9 +147,66 @@ export default function QuickTaskModal({
     };
 
     onAddTask(newTask);
+
+    // Jika pengguna memilih opsi persiapan bertahap (Anti-Mendadak)
+    if (taskType === "ulangan" && examPrepOption === "phased") {
+      try {
+        const examDateObj = new Date(dueDate);
+
+        // H-7 Review Materi
+        const h7DateObj = new Date(examDateObj);
+        h7DateObj.setDate(examDateObj.getDate() - 7);
+        const y7 = h7DateObj.getFullYear();
+        const m7 = String(h7DateObj.getMonth() + 1).padStart(2, "0");
+        const d7 = String(h7DateObj.getDate()).padStart(2, "0");
+        const h7DateStr = `${y7}-${m7}-${d7}`;
+        const h7Label = calculateDeadlineLabel(h7DateStr);
+
+        const h7Task: TaskItem = {
+          id: `task-${Date.now()}-h7`,
+          title: `[Review H-7] Pembahasan Materi: ${title.trim()}`,
+          course: finalCourse,
+          difficulty: "sedang",
+          taskType: "tugas",
+          deadlineLabel: h7Label.split(" ")[0],
+          deadlineDate: `${h7DateStr} 20:00 WIB`,
+          weight: "Persiapan Ujian",
+          completed: false,
+          priority: "medium",
+        };
+        onAddTask(h7Task);
+
+        // H-3 Simulasi Soal & Ujian Mandiri
+        const h3DateObj = new Date(examDateObj);
+        h3DateObj.setDate(examDateObj.getDate() - 3);
+        const y3 = h3DateObj.getFullYear();
+        const m3 = String(h3DateObj.getMonth() + 1).padStart(2, "0");
+        const d3 = String(h3DateObj.getDate()).padStart(2, "0");
+        const h3DateStr = `${y3}-${m3}-${d3}`;
+        const h3Label = calculateDeadlineLabel(h3DateStr);
+
+        const h3Task: TaskItem = {
+          id: `task-${Date.now()}-h3`,
+          title: `[Simulasi H-3] Latihan Soal & Kuis: ${title.trim()}`,
+          course: finalCourse,
+          difficulty: "sulit",
+          taskType: "kuis",
+          deadlineLabel: h3Label.split(" ")[0],
+          deadlineDate: `${h3DateStr} 21:00 WIB`,
+          weight: "Simulasi Ujian",
+          completed: false,
+          priority: "high",
+        };
+        onAddTask(h3Task);
+      } catch (err) {
+        console.error("Gagal menjadwalkan persiapan bertahap ulangan:", err);
+      }
+    }
+
     setTitle("");
     setIsCustomCourse(false);
     setCustomCourseName("");
+    setExamPrepOption("none");
     onClose();
   };
 
@@ -230,6 +289,68 @@ export default function QuickTaskModal({
               </button>
             </div>
           </div>
+
+          {/* Opsi Persiapan Ulangan (Jika tipe Ulangan dipilih) */}
+          {taskType === "ulangan" && (
+            <div className="p-3.5 rounded-2xl bg-m3-surface-container/60 border border-m3-outline-variant space-y-2.5 animate-in fade-in duration-200">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-m3-on-surface flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-m3-primary" />
+                  <span>Rencana Persiapan Ulangan</span>
+                </span>
+                <span className="text-[10px] text-m3-secondary font-medium">Anti-Mendadak</span>
+              </div>
+              <p className="text-[11px] text-m3-on-surface-variant leading-relaxed">
+                Pilih apakah Anda ingin membuat rangkaian tugas persiapan atau cukup mencatat jadwal ujian saja tanpa tugas mendadak.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setExamPrepOption("none")}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    examPrepOption === "none"
+                      ? "bg-m3-surface-container-high border-m3-primary text-m3-on-surface ring-1 ring-m3-primary shadow-2xs"
+                      : "bg-m3-surface-container/40 border-m3-outline-variant hover:bg-m3-surface-container text-m3-secondary"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      examPrepOption === "none" ? "border-m3-primary bg-m3-primary" : "border-m3-outline"
+                    }`}>
+                      {examPrepOption === "none" && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                    <span className="text-xs font-bold text-m3-on-surface">Catat Tanggal Saja</span>
+                  </div>
+                  <p className="text-[10px] text-m3-on-surface-variant mt-1.5 pl-5.5 leading-snug">
+                    Hanya membuat 1 entri ulangan tanpa tugas persiapan tambahan.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setExamPrepOption("phased")}
+                  className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer ${
+                    examPrepOption === "phased"
+                      ? "bg-m3-primary/10 border-m3-primary text-m3-on-surface ring-1 ring-m3-primary shadow-2xs"
+                      : "bg-m3-surface-container/40 border-m3-outline-variant hover:bg-m3-surface-container text-m3-secondary"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      examPrepOption === "phased" ? "border-m3-primary bg-m3-primary" : "border-m3-outline"
+                    }`}>
+                      {examPrepOption === "phased" && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                    <span className="text-xs font-bold text-m3-on-surface">Persiapan Bertahap</span>
+                  </div>
+                  <p className="text-[10px] text-m3-on-surface-variant mt-1.5 pl-5.5 leading-snug">
+                    Jadwalkan otomatis Review Materi (H-7) dan Simulasi Ujian (H-3).
+                  </p>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Mata Kuliah & Tingkat Kesulitan (Mudah, Sedang, Sulit) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

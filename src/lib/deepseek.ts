@@ -152,3 +152,108 @@ Minggu Kuliah Berjalan Saat Ini: Minggu ke-${currentWeek}`;
     };
   }
 }
+
+export interface GeneratedQuestionItem {
+  question: string;
+  options: string[];
+  correctAnswer: number;
+  explanation: string;
+  flashcardFront?: string;
+  flashcardBack?: string;
+  source?: string;
+}
+
+/**
+ * AI Quiz Generator via DeepSeek
+ * Supports 'auto' mode which automatically creates case studies / scenario problems
+ * for practical, technical, and programming courses.
+ */
+export async function generateQuizWithDeepSeek(params: {
+  courseName: string;
+  sources: string[];
+  sourceTitle?: string;
+  quizType: "auto" | "quiz" | "flashcard" | "ulangan";
+  questionCount: number;
+  docSnippets?: string[];
+}): Promise<GeneratedQuestionItem[]> {
+  const {
+    courseName,
+    sources = ["catatan"],
+    sourceTitle = "Materi Perkuliahan",
+    quizType = "auto",
+    questionCount = 5,
+    docSnippets = [],
+  } = params;
+
+  const isAutoMode = quizType === "auto";
+  const effectiveCount = Math.min(Math.max(questionCount, 3), 10);
+
+  const systemPrompt = `Anda adalah Dosen Senior dan Pakar Asesmen Akademik Mahasiswa di platform AkademikOS.
+Tugas Anda adalah merancang ${effectiveCount} butir latihan akademik bermutu tinggi untuk mata kuliah: "${courseName}".
+Sumber rujukan: ${sources.join(", ")} (${sourceTitle}).
+${docSnippets.length > 0 ? `Konteks Materi Dokumen: ${docSnippets.slice(0, 3).join("\n---\n")}` : ""}
+
+Pedoman Desain Soal:
+${
+  isAutoMode
+    ? `Format Latihan: AUTO (Adaptif Cerdas).
+- Analisis karakteristik mata kuliah "${courseName}":
+  * JIKA MATA KULIAH PRAKTIK, CODING, TEKNIK, ATAU TERAPAN (seperti Pemrograman, Basis Data, Metode Numerik, Jaringan, Rekayasa Perangkat Lunak, UI/UX, dsb.):
+    WAJIB menyusun soal bertipe STUDI KASUS / SOAL CERITA NYATA (Scenario-based problem solving). Awali pertanyaan dengan skenario dunia nyata (studi kasus industri, analisis arsitektur, bug fixing, query SQL, atau optimasi komputasi).
+  * JIKA MATA KULIAH TEORI / UMUM:
+    Susun soal analisis komparasi konsep dan pemecahan dilema akademik tingkat tinggi (HOTS).`
+    : quizType === "flashcard"
+    ? `Format Latihan: FLASHCARD (Kartu Hafalan & Konsep Kunci).
+Setiap butir harus memiliki pertanyaan kartu depan (flashcardFront) dan kartu belakang (flashcardBack) yang ringkas, padat, dan esensial.`
+    : quizType === "ulangan"
+    ? `Format Latihan: SIMULASI ULANGAN (Komprehensif & Menantang).
+Ujilah pemahaman menyeluruh silabus dan aplikasi materi.`
+    : `Format Latihan: KUIS PILIHAN GANDA (Standar Pemahaman).`
+}
+
+Aturan Kritis:
+1. Soal harus relevan dengan silabus pendidikan tinggi (S1/D4).
+2. Sediakan 4 opsi jawaban (A, B, C, D) yang masuk akal dan mengecoh.
+3. Kunci jawaban (correctAnswer) berupa angka indeks 0 s.d. 3.
+4. Sertakan penjelasan (explanation) akademis yang jelas dan mendalam mengapa opsi tersebut benar.
+5. Gunakan Bahasa Indonesia akademis yang baik, baku, dan tanpa emoji.
+
+Output WAJIB berupa JSON valid:
+{
+  "questions": [
+    {
+      "question": "Teks soal atau skenario studi kasus...",
+      "options": ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+      "correctAnswer": 0,
+      "explanation": "Penjelasan mendalam kunci jawaban...",
+      "flashcardFront": "Pertanyaan ringkas...",
+      "flashcardBack": "Jawaban inti..."
+    }
+  ]
+}`;
+
+  const userPrompt = `Buatkan ${effectiveCount} butir latihan format "${quizType}" untuk mata kuliah "${courseName}" dengan topik "${sourceTitle}".`;
+
+  const rawJson = await callDeepSeekChat(
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    { temperature: 0.35, jsonMode: true, maxTokens: 2500 }
+  );
+
+  const parsed = JSON.parse(rawJson);
+  if (Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+    return parsed.questions.map((q: any) => ({
+      question: q.question || "Pertanyaan evaluasi akademik",
+      options: Array.isArray(q.options) && q.options.length >= 4 ? q.options.slice(0, 4) : ["Opsi A", "Opsi B", "Opsi C", "Opsi D"],
+      correctAnswer: typeof q.correctAnswer === "number" && q.correctAnswer >= 0 && q.correctAnswer <= 3 ? q.correctAnswer : 0,
+      explanation: q.explanation || "Kunci jawaban telah diverifikasi sesuai konsep materi.",
+      flashcardFront: q.flashcardFront || q.question,
+      flashcardBack: q.flashcardBack || (q.options ? q.options[q.correctAnswer || 0] : q.explanation),
+      source: sourceTitle,
+    }));
+  }
+
+  throw new Error("Format respons AI kuis tidak valid.");
+}

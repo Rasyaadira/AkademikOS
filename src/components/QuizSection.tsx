@@ -39,7 +39,7 @@ interface QuizQuestion {
 export interface QuizItem {
   id: string;
   title: string;
-  quizType: "quiz" | "flashcard" | "ulangan";
+  quizType: "auto" | "quiz" | "flashcard" | "ulangan";
   sourceType: string;
   sourceTitle: string;
   totalQuestions: number;
@@ -90,7 +90,7 @@ export default function QuizSection({
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
   const [selectedRpsSession, setSelectedRpsSession] = useState<number>(1);
   const [prediksiScope, setPrediksiScope] = useState<"uts" | "uas">("uts");
-  const [quizType, setQuizType] = useState<"quiz" | "flashcard" | "ulangan">("quiz");
+  const [quizType, setQuizType] = useState<"auto" | "quiz" | "flashcard" | "ulangan">("auto");
   const [questionCount, setQuestionCount] = useState<number>(5);
 
   // Active quiz runtime states
@@ -475,12 +475,14 @@ export default function QuizSection({
 
       {/* ACTIVE QUIZ VIEW */}
       {activeQuiz && (
-        <div className="bg-white dark:bg-m3-surface border border-m3-outline-variant rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
+        <div className="bg-white dark:bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-6 sm:p-8 shadow-xs space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-m3-outline-variant/60 flex-wrap gap-2">
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-m3-secondary block">
-                {activeQuiz.quizType === "flashcard"
+                {activeQuiz.quizType === "auto"
+                  ? "Latihan Adaptif (Studi Kasus AI)"
+                  : activeQuiz.quizType === "flashcard"
                   ? "Kartu Hafalan"
                   : activeQuiz.quizType === "ulangan"
                   ? "Simulasi Ulangan"
@@ -612,8 +614,8 @@ export default function QuizSection({
             </div>
           )}
 
-          {/* QUIZ & ULANGAN MODE */}
-          {(activeQuiz.quizType === "quiz" || activeQuiz.quizType === "ulangan") && !isQuizCompleted && (
+          {/* QUIZ, ULANGAN & AUTO MODE */}
+          {(activeQuiz.quizType === "quiz" || activeQuiz.quizType === "ulangan" || activeQuiz.quizType === "auto") && !isQuizCompleted && (
             <div className="max-w-2xl mx-auto space-y-6">
               {/* Progress */}
               <div className="space-y-2">
@@ -636,7 +638,7 @@ export default function QuizSection({
               </div>
 
               {/* Question */}
-              <div className="p-6 rounded-2xl bg-m3-surface-container/40 dark:bg-m3-surface-container/70 border-2 border-m3-outline-variant space-y-3">
+              <div className="p-6 rounded-2xl bg-m3-surface-container/40 dark:bg-m3-surface-container/70 border-2 border-m3-outline-variant dark:border-[#2A3B5C] space-y-3">
                 <div className="flex items-center gap-2">
                   <span className="font-extrabold text-[11px] px-2.5 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/80 text-indigo-900 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-700">
                     {activeQuiz.questions[currentQIndex]?.source || "Materi Kuliah"}
@@ -655,27 +657,27 @@ export default function QuizSection({
                   const isCorrect = optIdx === activeQuiz.questions[currentQIndex].correctAnswer;
 
                   let optionClasses =
-                    "bg-white dark:bg-m3-surface-container border-2 border-slate-300 dark:border-slate-700 hover:border-m3-primary hover:bg-slate-50 dark:hover:bg-slate-800 text-m3-on-surface";
+                    "bg-white dark:bg-[#162032] border-2 border-slate-300 dark:border-[#2E3F5F] hover:border-m3-primary dark:hover:border-m3-primary hover:bg-slate-50 dark:hover:bg-[#1E2B43] text-m3-on-surface";
                   let letterBoxClasses =
-                    "bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-300 dark:border-slate-600";
+                    "bg-slate-100 dark:bg-[#202C42] text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-[#3B4E73]";
 
                   if (isChecked) {
                     if (isCorrect) {
                       optionClasses =
-                        "bg-emerald-50 dark:bg-emerald-950/60 border-2 border-emerald-500 text-emerald-950 dark:text-emerald-100 font-bold ring-2 ring-emerald-400/30";
+                        "bg-emerald-50 dark:bg-emerald-950/70 border-2 border-emerald-500 text-emerald-950 dark:text-emerald-100 font-bold ring-2 ring-emerald-400/40";
                       letterBoxClasses = "bg-emerald-600 text-white border-emerald-600 font-extrabold";
                     } else if (isSelected) {
                       optionClasses =
-                        "bg-rose-50 dark:bg-rose-950/60 border-2 border-rose-500 text-rose-950 dark:text-rose-100 font-bold ring-2 ring-rose-400/30";
+                        "bg-rose-50 dark:bg-rose-950/70 border-2 border-rose-500 text-rose-950 dark:text-rose-100 font-bold ring-2 ring-rose-400/40";
                       letterBoxClasses = "bg-rose-600 text-white border-rose-600 font-extrabold";
                     } else {
                       optionClasses =
-                        "opacity-50 bg-slate-50/50 dark:bg-slate-900/30 border-2 border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400";
-                      letterBoxClasses = "bg-slate-200 dark:bg-slate-800 text-slate-500 border border-slate-300 dark:border-slate-700";
+                        "opacity-50 bg-slate-50/50 dark:bg-[#111827]/40 border-2 border-slate-200 dark:border-[#1E293B] text-slate-500 dark:text-slate-400";
+                      letterBoxClasses = "bg-slate-200 dark:bg-[#1E293B] text-slate-500 border border-slate-300 dark:border-[#2A3B5C]";
                     }
                   } else if (isSelected) {
                     optionClasses =
-                      "bg-indigo-50/70 dark:bg-indigo-950/50 border-2 border-m3-primary text-m3-on-surface font-bold ring-2 ring-m3-primary/30";
+                      "bg-indigo-50/70 dark:bg-indigo-950/70 border-2 border-m3-primary text-m3-on-surface font-bold ring-2 ring-m3-primary/40";
                     letterBoxClasses = "bg-m3-primary text-m3-on-primary border-m3-primary font-extrabold";
                   }
 
@@ -720,7 +722,7 @@ export default function QuizSection({
 
               {/* Explanation */}
               {showAnswer[currentQIndex] && (
-                <div className="p-5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/50 border-2 border-indigo-200 dark:border-indigo-800 text-xs sm:text-sm space-y-2 animate-in fade-in">
+                <div className="p-5 rounded-2xl bg-indigo-50/90 dark:bg-indigo-950/60 border-2 border-indigo-200 dark:border-indigo-700 text-xs sm:text-sm space-y-2 animate-in fade-in">
                   <div className="flex items-center gap-2 font-extrabold text-indigo-900 dark:text-indigo-200">
                     <HelpCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                     <span>Kunci & Pembahasan Konsep:</span>
@@ -1004,23 +1006,45 @@ export default function QuizSection({
                 <span>Format Latihan</span>
               </label>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
-                  { key: "quiz", label: "Kuis Pilihan Ganda" },
-                  { key: "flashcard", label: "Kartu Hafalan" },
-                  { key: "ulangan", label: "Simulasi Ulangan" },
+                  {
+                    key: "auto",
+                    label: "Auto (Rekomendasi AI)",
+                    desc: "Adaptif: Soal studi kasus/cerita jika praktik & kode, atau konsep jika teori.",
+                  },
+                  {
+                    key: "quiz",
+                    label: "Kuis Pilihan Ganda",
+                    desc: "Pilihan ganda terarah berbasis rangkuman materi perkuliahan.",
+                  },
+                  {
+                    key: "flashcard",
+                    label: "Kartu Hafalan",
+                    desc: "Kartu interaktif bolak-balik untuk pemahaman cepat konsep inti.",
+                  },
+                  {
+                    key: "ulangan",
+                    label: "Simulasi Ulangan",
+                    desc: "Simulasi ujian UTS/UAS komprehensif berstandar akademik.",
+                  },
                 ].map((fmt) => (
                   <button
                     key={fmt.key}
                     type="button"
                     onClick={() => setQuizType(fmt.key as any)}
-                    className={`p-4 rounded-2xl border cursor-pointer transition-all text-left ${
+                    className={`p-3.5 rounded-2xl border cursor-pointer transition-all text-left flex flex-col justify-between ${
                       quizType === fmt.key
-                        ? "bg-m3-primary/10 border-m3-primary text-m3-on-surface shadow-2xs"
+                        ? "bg-m3-primary/10 border-m3-primary text-m3-on-surface ring-1 ring-m3-primary shadow-2xs"
                         : "bg-white dark:bg-m3-surface-container/40 border-m3-outline-variant hover:bg-m3-surface-container/60 text-m3-on-surface"
                     }`}
                   >
-                    <span className="text-xs font-bold block">{fmt.label}</span>
+                    <div>
+                      <span className="text-xs font-bold block">{fmt.label}</span>
+                      <p className="text-[11px] text-m3-on-surface-variant mt-1 leading-snug">
+                        {fmt.desc}
+                      </p>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -1106,7 +1130,9 @@ export default function QuizSection({
                     <div className="space-y-1.5">
                       <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-m3-surface-container border border-m3-outline-variant text-m3-on-surface uppercase">
-                          {quiz.quizType === "flashcard"
+                          {quiz.quizType === "auto"
+                            ? "Auto (Adaptif)"
+                            : quiz.quizType === "flashcard"
                             ? "Flashcard"
                             : quiz.quizType === "ulangan"
                             ? "Ulangan"

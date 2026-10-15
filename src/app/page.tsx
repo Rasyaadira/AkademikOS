@@ -9,6 +9,7 @@ import TaskList from "@/components/TaskList";
 import QuickTaskModal from "@/components/QuickTaskModal";
 import UploadDocModal from "@/components/UploadDocModal";
 import OtherViews, { StudentProfile } from "@/components/OtherViews";
+import LoginPage from "@/components/LoginPage";
 import { TaskItem } from "@/components/ActionDeck";
 import { Menu, X, CalendarDays } from "lucide-react";
 
@@ -17,6 +18,8 @@ export default function HomeDashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [isQuickTaskOpen, setIsQuickTaskOpen] = useState(false);
   const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string>("student-clean");
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
 
   const [newUploadedDoc, setNewUploadedDoc] = useState<{
@@ -24,6 +27,8 @@ export default function HomeDashboard() {
     course: string;
     docType: string;
     filePath?: string;
+    previewPath?: string;
+    originalPath?: string;
     sessionNo?: number;
     topic?: string;
   } | null>(null);
@@ -87,6 +92,19 @@ export default function HomeDashboard() {
   useEffect(() => {
     loadUserData();
   }, []);
+
+  const handleLoginSuccess = async (userId: string) => {
+    setCurrentUserId(userId);
+    setIsLoginModalOpen(false);
+    localStorage.setItem("akademikos_active_user", userId);
+    await loadUserData();
+    setBannerNotice(`Berhasil beralih ke akun ${userId === "student-clean" ? "Akun Bersih" : "Mahasiswa"}.`);
+    setTimeout(() => setBannerNotice(null), 3500);
+  };
+
+  const handleLogout = () => {
+    setIsLoginModalOpen(true);
+  };
 
   // Update task attributes and persist to DB
   const handleUpdateTask = async (id: string, updated: Partial<TaskItem>) => {
@@ -282,6 +300,8 @@ export default function HomeDashboard() {
     course?: string;
     sessionNo?: number;
     filePath?: string;
+    previewPath?: string;
+    originalPath?: string;
     topic?: string;
   }) => {
     const targetCourse = info.course || (schedules[0]?.course || "Mata Kuliah Umum");
@@ -291,6 +311,8 @@ export default function HomeDashboard() {
       docType: info.docType,
       sessionNo: info.sessionNo,
       filePath: info.filePath,
+      previewPath: info.previewPath,
+      originalPath: info.originalPath,
       topic: info.topic,
     });
 
@@ -304,6 +326,8 @@ export default function HomeDashboard() {
           course: targetCourse,
           fileName: info.fileName,
           filePath: info.filePath,
+          previewPath: info.previewPath,
+          originalPath: info.originalPath,
           fileType: info.fileName.toLowerCase().endsWith(".pptx")
             ? "pptx"
             : info.fileName.toLowerCase().endsWith(".docx")
@@ -340,9 +364,9 @@ export default function HomeDashboard() {
   );
 
   return (
-    <div className="min-h-screen bg-[#F1F5F9] text-m3-on-surface flex flex-col md:flex-row antialiased p-2.5 sm:p-3.5 gap-3.5">
+    <div className="min-h-screen bg-m3-surface text-m3-on-surface flex flex-col md:flex-row antialiased p-2.5 sm:p-3.5 gap-3.5 transition-colors">
       {/* Mobile Top App Bar */}
-      <header className="md:hidden flex items-center justify-between p-3.5 bg-white border border-slate-200/80 rounded-2xl shadow-xs">
+      <header className="md:hidden flex items-center justify-between p-3.5 bg-white dark:bg-m3-surface-container-low border border-slate-200/80 dark:border-m3-outline-variant rounded-2xl shadow-xs">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-xl bg-m3-primary flex items-center justify-center text-m3-on-primary font-bold text-xs">
             A
@@ -351,7 +375,7 @@ export default function HomeDashboard() {
         </div>
         <button
           onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-          className="p-2 rounded-full hover:bg-slate-100 transition-colors text-m3-secondary"
+          className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-m3-surface-container transition-colors text-m3-secondary"
           aria-label="Buka menu navigasi"
         >
           {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
@@ -364,6 +388,7 @@ export default function HomeDashboard() {
           activeTab={activeTab}
           onSelectTab={setActiveTab}
           profile={profile}
+          onLogout={handleLogout}
         />
       </div>
 
@@ -374,7 +399,7 @@ export default function HomeDashboard() {
             className="fixed inset-0 bg-slate-950/40 backdrop-blur-xs"
             onClick={() => setMobileSidebarOpen(false)}
           />
-          <div className="relative w-64 max-w-xs z-50 bg-white h-full shadow-xl">
+          <div className="relative w-64 max-w-xs z-50 bg-white dark:bg-m3-surface-container-low h-full shadow-xl">
             <Sidebar
               activeTab={activeTab}
               onSelectTab={(tab) => {
@@ -382,13 +407,14 @@ export default function HomeDashboard() {
                 setMobileSidebarOpen(false);
               }}
               profile={profile}
+              onLogout={handleLogout}
             />
           </div>
         </div>
       )}
 
       {/* Main Content Area: Large Floating Pill Sheet */}
-      <main className="flex-1 bg-white rounded-[32px] sm:rounded-[36px] p-5 sm:p-7 border border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.03)] flex flex-col space-y-6 overflow-x-hidden">
+      <main className="flex-1 bg-white dark:bg-m3-surface-container-low rounded-[32px] sm:rounded-[36px] p-5 sm:p-7 border border-slate-200/80 dark:border-m3-outline-variant shadow-[0_2px_16px_rgba(0,0,0,0.03)] flex flex-col space-y-6 overflow-x-hidden">
         {/* Real-time Notification Banner */}
         {bannerNotice && (
           <div className="p-3.5 rounded-2xl bg-m3-primary-container border border-m3-primary text-xs font-semibold text-m3-on-primary-container flex items-center justify-between animate-in fade-in slide-in-from-top-2">
@@ -506,6 +532,7 @@ export default function HomeDashboard() {
             onUpdateTask={handleUpdateTask}
             newUploadedDoc={newUploadedDoc}
             selectedCourseForRps={selectedCourseForRps}
+            onLogout={handleLogout}
           />
         )}
       </main>
@@ -531,6 +558,23 @@ export default function HomeDashboard() {
         noAiMode={!!profile.noAiMode}
         semesterStartDate={profile.semesterStartDate}
       />
+
+      {/* Login / Switch Account Modal */}
+      {isLoginModalOpen && (
+        <LoginPage
+          onLogin={handleLoginSuccess}
+          onClose={() => setIsLoginModalOpen(false)}
+          currentUserId={currentUserId}
+          onResetData={async (uid) => {
+            await fetch(`/api/reset?userId=${uid}`, { method: "POST" });
+            await loadUserData();
+          }}
+          onRestoreDemo={async () => {
+            await fetch("/api/seed", { method: "POST" });
+            await loadUserData();
+          }}
+        />
+      )}
     </div>
   );
 }

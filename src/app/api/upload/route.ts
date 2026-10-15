@@ -26,13 +26,46 @@ export async function POST(request: NextRequest) {
 
     fs.writeFileSync(filePath, buffer);
 
+    const ext = path.extname(file.name).toLowerCase();
+    let previewPath = `/api/storage/${safeName}`;
+    let convertedToPdf = false;
+
+    // Otomatis convert Office documents (PPTX, PPT, DOCX, XLSX) ke PDF via LibreOffice headless
+    if ([".pptx", ".ppt", ".docx", ".doc", ".xlsx", ".xls"].includes(ext)) {
+      try {
+        const baseNameWithoutExt = path.basename(safeName, ext);
+        const expectedPdfName = `${baseNameWithoutExt}.pdf`;
+        const expectedPdfPath = path.join(storageDir, expectedPdfName);
+
+        const { spawnSync } = await import("child_process");
+        spawnSync("soffice", [
+          "--headless",
+          "--convert-to",
+          "pdf",
+          filePath,
+          "--outdir",
+          storageDir,
+        ], { timeout: 30000 });
+
+        if (fs.existsSync(expectedPdfPath)) {
+          previewPath = `/api/storage/${expectedPdfName}`;
+          convertedToPdf = true;
+        }
+      } catch (convErr) {
+        console.warn("Auto-convert to PDF gagal:", convErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       originalName: file.name,
       filePath: `/api/storage/${safeName}`,
-      url: `/api/storage/${safeName}`,
+      previewPath: previewPath,
+      originalPath: `/api/storage/${safeName}`,
+      url: previewPath,
       size: file.size,
       mimeType: file.type,
+      convertedToPdf,
     });
   } catch (error) {
     console.error("Upload error:", error);

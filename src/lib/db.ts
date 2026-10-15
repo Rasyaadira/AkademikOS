@@ -253,6 +253,18 @@ try {
   // Concurrent worker safety
 }
 
+try {
+  const docCols: any[] = db.prepare("PRAGMA table_info(uploaded_documents)").all();
+  if (!docCols.some((c) => c.name === "preview_path")) {
+    db.exec("ALTER TABLE uploaded_documents ADD COLUMN preview_path TEXT;");
+  }
+  if (!docCols.some((c) => c.name === "original_path")) {
+    db.exec("ALTER TABLE uploaded_documents ADD COLUMN original_path TEXT;");
+  }
+} catch (e) {
+  console.log("Migration check uploaded_documents:", e);
+}
+
 // Clean initialization: Single personal student profile, zero mock tasks/schedules
 export function initializeCleanDatabase() {
   const init = db.transaction(() => {

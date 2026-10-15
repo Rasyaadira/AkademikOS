@@ -133,7 +133,6 @@ export default function ScheduleCalendar({
   const [filterTasks, setFilterTasks] = useState(true);
   const [filterAgendas, setFilterAgendas] = useState(true);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
-  const [isDragAddDropdownOpen, setIsDragAddDropdownOpen] = useState(false);
   const [customDragCourse, setCustomDragCourse] = useState("");
 
   // Add & Import Schedule state
@@ -755,98 +754,6 @@ export default function ScheduleCalendar({
               )}
             </div>
 
-            {/* Popover Tarik Jadwal (Drag & Drop) */}
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsDragAddDropdownOpen(!isDragAddDropdownOpen);
-                  setIsFilterDropdownOpen(false);
-                }}
-                className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-[11px] font-semibold transition-all shadow-xs cursor-pointer ${
-                  isDragAddDropdownOpen
-                    ? "bg-m3-primary/10 border-m3-primary text-m3-primary"
-                    : "bg-m3-surface-container hover:bg-m3-surface-container-high border-m3-outline-variant text-m3-on-surface"
-                }`}
-                title="Tarik kartu mata kuliah langsung ke kotak jam di kalender"
-              >
-                <GripVertical className="w-3.5 h-3.5 text-m3-primary" />
-                <span>Tarik Jadwal</span>
-                <ChevronDown className={`w-3 h-3 transition-transform ${isDragAddDropdownOpen ? "rotate-180 text-m3-primary" : "text-m3-secondary"}`} />
-              </button>
-
-              {isDragAddDropdownOpen && (
-                <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-white rounded-2xl border border-m3-outline-variant shadow-xl p-3.5 z-40 space-y-3 animate-in fade-in zoom-in-95">
-                  <div className="flex items-center justify-between pb-2 border-b border-m3-outline-variant/60">
-                    <div className="flex items-center gap-1.5">
-                      <GripVertical className="w-4 h-4 text-m3-primary" />
-                      <span className="text-xs font-bold text-m3-on-surface">Tarik ke Jam Kalender</span>
-                    </div>
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-m3-primary/10 text-m3-primary">
-                      Drag & Drop
-                    </span>
-                  </div>
-
-                  {/* Input Custom Course */}
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      type="text"
-                      value={quickAddCourse}
-                      onChange={(e) => setQuickAddCourse(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleQuickAdd();
-                          setIsDragAddDropdownOpen(false);
-                        }
-                      }}
-                      placeholder="Ketik matkul lain..."
-                      className="flex-1 text-xs px-2.5 py-1.5 rounded-xl border border-m3-outline-variant bg-m3-surface-container-low text-m3-on-surface focus:outline-none focus:border-m3-primary"
-                    />
-                    {quickAddCourse.trim() && (
-                      <div
-                        draggable
-                        onDragStart={(e) => {
-                          e.dataTransfer.setData("text/plain", "new-course:" + quickAddCourse.trim());
-                          setDraggedItemId("new-course:" + quickAddCourse.trim());
-                        }}
-                        onDragEnd={() => setDraggedItemId(null)}
-                        className="px-2.5 py-1.5 bg-m3-primary text-m3-on-primary text-[11px] font-bold rounded-xl cursor-grab active:cursor-grabbing flex items-center gap-1 shadow-xs hover:brightness-95 flex-shrink-0"
-                        title="Tarik ke slot kalender"
-                      >
-                        <GripVertical className="w-3.5 h-3.5" />
-                        <span>Tarik</span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Course Suggestion Chips */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold text-m3-secondary uppercase tracking-wider">
-                      Mata Kuliah Rekomendasi
-                    </span>
-                    <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1">
-                      {QUICK_COURSE_SUGGESTIONS.map((courseName) => (
-                        <div
-                          key={courseName}
-                          draggable
-                          onDragStart={(e) => {
-                            e.dataTransfer.setData("text/plain", "new-course:" + courseName);
-                            setDraggedItemId("new-course:" + courseName);
-                          }}
-                          onDragEnd={() => setDraggedItemId(null)}
-                          className="text-[11px] font-semibold px-2 py-1.5 rounded-xl bg-m3-surface-container-low hover:bg-m3-primary/10 border border-m3-outline-variant/60 hover:border-m3-primary/40 text-m3-on-surface cursor-grab active:cursor-grabbing transition-all flex items-center justify-between gap-1 shadow-2xs select-none"
-                          title={`Tarik ${courseName} ke kotak hari & jam kalender`}
-                        >
-                          <span className="truncate">{courseName}</span>
-                          <GripVertical className="w-3 h-3 text-m3-secondary opacity-60 flex-shrink-0" />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
 
             {/* Tombol Impor Jadwal AI (Hanya jika jadwal masih kosong dan AI mode aktif) */}
             {!noAiMode && schedules.length === 0 && (

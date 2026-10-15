@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import db, { DEFAULT_USER_ID } from "@/lib/db";
+import { generateQuizWithDeepSeek } from "@/lib/deepseek";
 
 // Helper knowledge bank for smart generation based on academic topics
 const KNOWLEDGE_BANK: Record<string, Array<{ q: string; opts: string[]; ans: number; exp: string; term: string; def: string }>> = {
@@ -121,6 +122,91 @@ const KNOWLEDGE_BANK: Record<string, Array<{ q: string; opts: string[]; ans: num
       exp: "Thrashing terjadi saat alokasi frame memori fisik tidak mencukupi working set proses, menyebabkan page fault berulang kali.",
       term: "Thrashing",
       def: "Penurunan performa drastis sistem karena tingkat page fault yang sangat tinggi dan aktivitas transfer I/O swap yang berlebihan."
+    }
+  ],
+  "kecerdasan buatan": [
+    {
+      q: "Dalam definisi AI menurut Russell & Norvig, pendekatan yang paling ideal untuk implementasi sistem modern adalah...",
+      opts: ["Thinking Humanly", "Acting Rationally (Rational Agent)", "Thinking Rationally", "Acting Humanly (Turing Test)"],
+      ans: 1,
+      exp: "Modern AI berpusat pada Rational Agent yang bertindak untuk memaksimalkan ukuran kinerja yang diharapkan.",
+      term: "Rational Agent",
+      def: "Entitas otonom yang mempersepsi lingkungan melalui sensor dan bertindak melalui aktuator untuk memaksimalkan utilitas yang diharapkan."
+    },
+    {
+      q: "Framework PEAS yang digunakan untuk mendeskripsikan lingkungan tugas seorang agen cerdas merupakan akronim dari...",
+      opts: ["Performance, Environment, Actuators, Sensors", "Program, Execution, Action, State", "Perception, Entity, Architecture, System", "Process, Environment, Analysis, Strategy"],
+      ans: 0,
+      exp: "PEAS mencakup Performance measure, Environment, Actuators, dan Sensors.",
+      term: "PEAS Framework",
+      def: "Metodologi penentuan spesifikasi masalah agen cerdas mencakup ukuran kinerja, lingkungan, aktuator, dan sensor."
+    },
+    {
+      q: "Fungsi evaluasi f(n) pada algoritma pencarian A* (A-Star) didefinisikan sebagai...",
+      opts: ["f(n) = g(n) - h(n)", "f(n) = g(n) + h(n)", "f(n) = g(n) * h(n)", "f(n) = max(g(n), h(n))"],
+      ans: 1,
+      exp: "f(n) = g(n) + h(n). g(n) adalah biaya aktual dari start ke n, h(n) adalah perkiraan heuristik dari n ke goal.",
+      term: "Fungsi Evaluasi A*",
+      def: "f(n) = g(n) + h(n), menjamin pencarian rute terpendek yang efisien dan optimal jika heuristik admissible."
+    }
+  ],
+  "grafika komputer": [
+    {
+      q: "Teknik shading yang menghitung intensitas pencahayaan pada setiap piksel (per-pixel interpolation) untuk menghasilkan specular highlight yang halus adalah...",
+      opts: ["Flat Shading", "Gouraud Shading", "Phong Shading", "Wireframe"],
+      ans: 2,
+      exp: "Phong Shading menginterpolasi vektor normal permukaan per-piksel, menghasilkan pencahayaan spekular yang jauh lebih realistis dibanding Gouraud.",
+      term: "Phong Shading",
+      def: "Metode perenderan pencahayaan per-piksel yang menginterpolasi normal vektor untuk pantulan cahaya cemerlang dan kurva halus."
+    },
+    {
+      q: "Algoritma clipping garis 2D yang menggunakan kode biner 4-bit (outcode) untuk menentukan posisi segmen garis terhadap viewport adalah...",
+      opts: ["Sutherland-Hodgman", "Cohen-Sutherland", "Bresenham", "DDA"],
+      ans: 1,
+      exp: "Algoritma Cohen-Sutherland membagi bidang menjadi 9 wilayah menggunakan 4-bit outcode (Top, Bottom, Right, Left).",
+      term: "Cohen-Sutherland Clipping",
+      def: "Algoritma efisien untuk memotong segmen garis 2D terhadap jendela viewport menggunakan pengujian bitwise outcode."
+    }
+  ],
+  "sistem terdistribusi": [
+    {
+      q: "Protokol transaksi terdistribusi yang menjamin seluruh simpul (nodes) berkomitmen atau semuanya membatalkan transaksi adalah...",
+      opts: ["One-Phase Commit", "Two-Phase Commit (2PC)", "Lamport Timestamp", "Paxos Voting"],
+      ans: 1,
+      exp: "2PC terdiri dari fase Prepare (voting persetujuan) dan fase Commit/Abort global untuk menjamin sifat Atomicity.",
+      term: "Two-Phase Commit (2PC)",
+      def: "Protokol koordinasi konsensus transaksi terdistribusi yang memastikan sifat atomik di berbagai database server."
+    },
+    {
+      q: "Mekanisme abstraksi jaringan yang memungkinkan pemanggilan fungsi di server jarak jauh menggunakan sintaks lokal dinamakan...",
+      opts: ["RPC (Remote Procedure Call)", "Socket Polling", "Message Queue", "FTP Bridge"],
+      ans: 0,
+      exp: "RPC menyamarkan latensi dan transmisi jaringan melalui stub client dan skeleton server.",
+      term: "RPC (Remote Procedure Call)",
+      def: "Protokol komunikasi antar-proses yang memungkinkan pemanggilan fungsi di ruang alamat komputer yang berbeda secara transparan."
+    }
+  ],
+  "manajemen proyek": [
+    {
+      q: "Dokumen formal yang mengesahkan keberadaan sebuah proyek dan memberikan wewenang kepada Project Manager disebut...",
+      opts: ["WBS Dictionary", "Project Charter", "Gantt Chart", "Business Case"],
+      ans: 1,
+      exp: "Project Charter disahkan sponsor proyek untuk menandai dimulainya inisiasi proyek secara resmi.",
+      term: "Project Charter",
+      def: "Dokumen pondasi inisiasi proyek yang memuat tujuan, ruang lingkup awal, sponsor, dan penunjukan resmi manajer proyek."
+    },
+    {
+      q: "Kaidah '100% Rule' dalam perancangan Work Breakdown Structure (WBS) mengharuskan...",
+      opts: [
+        "WBS harus mencakup 100% dari seluruh ruang lingkup pekerjaan yang disepakati tanpa ada yang tertinggal atau berlebih",
+        "Semua anggota tim harus bekerja 100% waktu",
+        "Tingkat keberhasilan proyek 100%",
+        "Anggaran dialokasikan 100% di muka"
+      ],
+      ans: 0,
+      exp: "100% Rule adalah aturan inti dekomposisi WBS agar tidak ada pekerjaan yang tertinggal atau keluar dari ruang lingkup proyek.",
+      term: "Aturan 100% WBS",
+      def: "Prinsip bahwa WBS harus memuat 100% pekerjaan yang disyaratkan oleh deliverables proyek, tidak lebih dan tidak kurang."
     }
   ]
 };
@@ -244,39 +330,79 @@ export async function POST(req: Request) {
     }
     const courseId = courseRow?.id || "course-general";
 
-    // Match questions from knowledge bank
-    const lowerCourse = courseName.toLowerCase();
-    const matchedBankKey = Object.keys(KNOWLEDGE_BANK).find((k) => lowerCourse.includes(k) || lowerCourse.includes(k.split(" ")[0]));
-    const bank = matchedBankKey ? KNOWLEDGE_BANK[matchedBankKey] : GENERAL_CS_QUESTIONS;
-
-    // Build question items combining selected sources
-    const selectedItems = [...bank, ...GENERAL_CS_QUESTIONS].slice(0, Math.min(questionCount, 10));
+    let generatedQuestions: any[] = [];
     const activeSources = Array.isArray(sources) && sources.length > 0 ? sources : [sourceType || "catatan"];
 
-    const generatedQuestions = selectedItems.map((item, idx) => {
-      const sourceForThisQ = activeSources[idx % activeSources.length];
-      const sourceLabelMap: Record<string, string> = {
-        catatan: "Catatan Kuliah",
-        tugas: "Tugas Kuliah",
-        rps: "RPS Silabus",
-        prediksi: "Prediksi Ujian",
-      };
-      const label = sourceLabelMap[sourceForThisQ] || "Materi Kuliah";
+    // 1. Generate with DeepSeek AI if not in no_ai_mode
+    try {
+      const userProfile: any = db.prepare("SELECT no_ai_mode FROM profile WHERE user_id = ? LIMIT 1").get(userId);
+      if (!userProfile?.no_ai_mode && process.env.DEEPSEEK_API_KEY) {
+        // Collect doc snippets if available
+        let docSnippets: string[] = [];
+        try {
+          const docs: any[] = db.prepare("SELECT topic, doc_type, file_name FROM documents WHERE course LIKE ? LIMIT 3").all(`%${courseName}%`);
+          docSnippets = docs.map((d: any) => `Dokumen: ${d.file_name} (${d.doc_type}), Topik: ${d.topic || "-"}`);
+        } catch {}
 
-      return {
-        id: `q-${idx + 1}`,
-        question: item.q,
-        options: item.opts,
-        correctAnswer: item.ans,
-        explanation: item.exp,
-        flashcardFront: item.term,
-        flashcardBack: `${item.def}\n\nCatatan: ${item.exp}`,
-        source: `${label} - ${courseName}`,
-      };
-    });
+        const aiQuestions = await generateQuizWithDeepSeek({
+          courseName,
+          sources: activeSources,
+          sourceTitle,
+          quizType,
+          questionCount,
+          docSnippets,
+        });
+
+        if (Array.isArray(aiQuestions) && aiQuestions.length > 0) {
+          generatedQuestions = aiQuestions.map((q, idx) => ({
+            id: `q-${idx + 1}`,
+            ...q,
+          }));
+        }
+      }
+    } catch (e) {
+      console.warn("DeepSeek generation skipped/failed, using knowledge bank:", e);
+    }
+
+    // 2. Fallback to rich academic knowledge bank if AI not configured or failed
+    if (generatedQuestions.length === 0) {
+      const lowerCourse = courseName.toLowerCase();
+      const matchedBankKey = Object.keys(KNOWLEDGE_BANK).find((k) => lowerCourse.includes(k) || lowerCourse.includes(k.split(" ")[0]));
+      const bank = matchedBankKey ? KNOWLEDGE_BANK[matchedBankKey] : GENERAL_CS_QUESTIONS;
+
+      const selectedItems = [...bank, ...GENERAL_CS_QUESTIONS].slice(0, Math.min(questionCount, 10));
+
+      generatedQuestions = selectedItems.map((item, idx) => {
+        const sourceForThisQ = activeSources[idx % activeSources.length];
+        const sourceLabelMap: Record<string, string> = {
+          catatan: "Catatan Kuliah",
+          tugas: "Tugas Kuliah",
+          rps: "RPS Silabus",
+          prediksi: "Prediksi Ujian",
+        };
+        const label = sourceLabelMap[sourceForThisQ] || "Materi Kuliah";
+
+        return {
+          id: `q-${idx + 1}`,
+          question: item.q,
+          options: item.opts,
+          correctAnswer: item.ans,
+          explanation: item.exp,
+          flashcardFront: item.term,
+          flashcardBack: `${item.def}\n\nCatatan: ${item.exp}`,
+          source: `${label} - ${courseName}`,
+        };
+      });
+    }
 
     const quizId = `quiz-${Date.now()}`;
-    const displayQuizType = quizType === "flashcard" ? "Flashcards" : quizType === "ulangan" ? "Simulasi Ulangan" : "Quiz";
+    const displayQuizType = quizType === "flashcard"
+      ? "Flashcards"
+      : quizType === "ulangan"
+      ? "Simulasi Ulangan"
+      : quizType === "auto"
+      ? "Latihan Adaptif (Studi Kasus)"
+      : "Quiz";
     const quizTitle = `${displayQuizType}: ${courseName} (${sourceTitle})`;
 
     // 7 days expiration from now

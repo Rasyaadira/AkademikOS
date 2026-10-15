@@ -26,6 +26,8 @@ interface UploadDocModalProps {
     course?: string;
     sessionNo?: number;
     filePath?: string;
+    previewPath?: string;
+    originalPath?: string;
     topic?: string;
   }) => void;
   initialFile?: File | null;
@@ -46,6 +48,8 @@ export default function UploadDocModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(initialFile);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadedPath, setUploadedPath] = useState<string | null>(null);
+  const [uploadedPreviewPath, setUploadedPreviewPath] = useState<string | null>(null);
+  const [uploadedOriginalPath, setUploadedOriginalPath] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<"pick" | "routing">("pick");
 
   // Academic week calculation (default: minggu sekarang)
@@ -165,6 +169,8 @@ export default function UploadDocModal({
       if (res.ok) {
         const data = await res.json();
         pathResult = data.filePath;
+        if (data.previewPath) setUploadedPreviewPath(data.previewPath);
+        if (data.originalPath) setUploadedOriginalPath(data.originalPath);
       }
     } catch (err) {
       console.warn("Upload fisik gagal, menggunakan representasi lokal:", err);
@@ -234,6 +240,8 @@ export default function UploadDocModal({
       course: courseToSave,
       sessionNo: typeof sessionNo === "number" ? sessionNo : undefined,
       filePath: uploadedPath || `/api/storage/${selectedFile.name}`,
+      previewPath: uploadedPreviewPath || uploadedPath || `/api/storage/${selectedFile.name}`,
+      originalPath: uploadedOriginalPath || uploadedPath || `/api/storage/${selectedFile.name}`,
       topic: topic.trim() || undefined,
     });
 
@@ -243,6 +251,8 @@ export default function UploadDocModal({
   const handleClose = () => {
     setSelectedFile(null);
     setUploadedPath(null);
+    setUploadedPreviewPath(null);
+    setUploadedOriginalPath(null);
     setCurrentStep("pick");
     setIsCustomCourse(false);
     setCustomCourseName("");

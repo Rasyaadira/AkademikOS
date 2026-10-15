@@ -43,6 +43,7 @@ import {
   Moon,
   Sun,
   Key,
+  LogOut,
 } from "lucide-react";
 import QuizSection from "./QuizSection";
 
@@ -62,6 +63,9 @@ export interface StudentProfile {
   semesterStartDate?: string;
   aiTokenUsage?: number;
   darkMode?: boolean;
+  opencodeApiKey?: string;
+  opencodeBaseUrl?: string;
+  opencodeModel?: string;
 }
 
 export interface CourseLecturerItem {
@@ -99,20 +103,25 @@ interface OtherViewsProps {
     course: string;
     docType: string;
     filePath?: string;
+    previewPath?: string;
+    originalPath?: string;
     sessionNo?: number;
     topic?: string;
   } | null;
   selectedCourseForRps?: string;
+  onLogout?: () => void;
 }
 
 // Data structures for RPS Folder Tree & Document Preview (40/60)
 interface FileItem {
   id: string;
   name: string;
-  type: "pdf" | "pptx" | "docx" | "jpg" | "png";
+  type: string;
   updated: string;
   description: string;
   filePath?: string;
+  previewPath?: string;
+  originalPath?: string;
   sessionNo?: number;
   topic?: string;
   sessions?: {
@@ -168,9 +177,11 @@ export default function OtherViews({
   onUpdateTask,
   newUploadedDoc,
   selectedCourseForRps,
+  onLogout,
 }: OtherViewsProps) {
   const [formData, setFormData] = useState<StudentProfile>(profile);
   const [isSaved, setIsSaved] = useState(false);
+  const [showOpenCodeKey, setShowOpenCodeKey] = useState(false);
 
   // Sync external profile changes into local formData (including photoUrl)
   React.useEffect(() => {
@@ -211,6 +222,8 @@ export default function OtherViews({
               type: ext,
               updated: doc.createdAt ? new Date(doc.createdAt).toLocaleDateString("id-ID") : "Tersimpan",
               filePath: doc.filePath,
+              previewPath: doc.previewPath,
+              originalPath: doc.originalPath || doc.filePath,
               sessionNo: doc.sessionNo,
               topic: doc.topic,
               description: `Dokumen ${doc.docType || "Perkuliahan"} untuk ${courseName}.`,
@@ -634,7 +647,7 @@ export default function OtherViews({
             {activeTab === "kalender" && "Kalender & Agenda"}
             {activeTab === "matkul" && "Mata Kuliah & Dosen Pengampu"}
             {activeTab === "quiz" && "AI Quiz & Review Mandiri"}
-            {(activeTab === "akun" || activeTab === "setting") && "Akun & Pengaturan Mahasiswa"}
+            {(activeTab === "akun" || activeTab === "setting") && "Pengaturan & Akun Mahasiswa"}
           </h2>
         </div>
       </div>
@@ -1268,61 +1281,132 @@ export default function OtherViews({
                   );
                 })()}
 
-                {/* AS-IS VIEWER: FISIK BERKAS ASLI (PDF, GAMBAR, ATAU OFFICE) */}
-                <div className="flex-1 w-full h-full min-h-[480px] rounded-2xl border border-m3-outline-variant bg-slate-100 flex flex-col overflow-hidden relative shadow-inner">
-                  {currentDoc.type === "pdf" || currentDoc.name.toLowerCase().endsWith(".pdf") ? (
-                    <iframe
-                      src={getDocFileUrl(currentDoc)}
-                      className="w-full h-full min-h-[480px] border-0 bg-white"
-                      title={currentDoc.name}
-                    />
-                  ) : currentDoc.type === "jpg" || currentDoc.type === "png" || currentDoc.name.toLowerCase().match(/\.(jpe?g|png|webp)$/i) ? (
-                    <div className="w-full h-full min-h-[480px] flex items-center justify-center p-4 bg-slate-900/5 overflow-auto">
-                      <img
-                        src={getDocFileUrl(currentDoc)}
-                        alt={currentDoc.name}
-                        className="max-h-[580px] max-w-full object-contain rounded-xl shadow-md border border-slate-200"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-full h-full min-h-[480px] flex flex-col items-center justify-center p-8 bg-white text-center space-y-4">
-                      <div className="w-16 h-16 rounded-3xl bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center shadow-xs">
-                        {currentDoc.type === "pptx" || currentDoc.name.toLowerCase().endsWith(".pptx") ? (
-                          <Presentation className="w-8 h-8 text-amber-600" />
-                        ) : (
-                          <FileText className="w-8 h-8 text-blue-600" />
-                        )}
+                {/* AS-IS VIEWER: FISIK BERKAS ASLI (PDF, GAMBAR, OFFICE TERKONVERSI, ATAU HTML) */}
+                <div className="flex-1 w-full h-full min-h-[500px] rounded-2xl border border-m3-outline-variant bg-slate-100 flex flex-col overflow-hidden relative shadow-inner">
+                  {(() => {
+                    const previewPdfUrl = currentDoc.previewPath || (currentDoc.type === "pdf" || currentDoc.name.toLowerCase().endsWith(".pdf") ? getDocFileUrl(currentDoc) : null);
+                    const isHtml = currentDoc.type === "html" || currentDoc.name.toLowerCase().endsWith(".html");
+                    const isImage = currentDoc.type === "jpg" || currentDoc.type === "png" || currentDoc.name.toLowerCase().match(/\.(jpe?g|png|webp)$/i);
+
+                    if (previewPdfUrl) {
+                      return (
+                        <div className="relative w-full h-full min-h-[500px] flex flex-col">
+                          {currentDoc.previewPath && !currentDoc.name.toLowerCase().endsWith(".pdf") && (
+                            <div className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-950/40 border-b border-indigo-100 dark:border-indigo-900/50 flex items-center justify-between text-[11px] text-indigo-800 dark:text-indigo-300">
+                              <span className="flex items-center gap-1.5 font-semibold">
+                                <Sparkles className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                <span>Pratinjau Presentasi & Dokumen (Dikonversi Otomatis ke PDF Berkualitas Tinggi)</span>
+                              </span>
+                              <div className="flex items-center gap-2">
+                                <a
+                                  href={previewPdfUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="font-bold hover:underline flex items-center gap-1 text-[10px]"
+                                >
+                                  <span>Buka Tab Baru</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              </div>
+                            </div>
+                          )}
+                          <iframe
+                            src={previewPdfUrl}
+                            className="w-full flex-1 min-h-[500px] border-0 bg-white"
+                            title={currentDoc.name}
+                          />
+                        </div>
+                      );
+                    }
+
+                    if (isHtml) {
+                      return (
+                        <iframe
+                          src={getDocFileUrl(currentDoc)}
+                          className="w-full h-full min-h-[500px] border-0 bg-white"
+                          title={currentDoc.name}
+                        />
+                      );
+                    }
+
+                    if (isImage) {
+                      return (
+                        <div className="w-full h-full min-h-[500px] flex items-center justify-center p-4 bg-slate-900/5 overflow-auto">
+                          <img
+                            src={getDocFileUrl(currentDoc)}
+                            alt={currentDoc.name}
+                            className="max-h-[580px] max-w-full object-contain rounded-xl shadow-md border border-slate-200"
+                          />
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="w-full h-full min-h-[500px] flex flex-col items-center justify-center p-8 bg-white text-center space-y-4">
+                        <div className="w-16 h-16 rounded-3xl bg-m3-primary-container text-m3-on-primary-container flex items-center justify-center shadow-xs">
+                          {currentDoc.type === "pptx" || currentDoc.name.toLowerCase().endsWith(".pptx") ? (
+                            <Presentation className="w-8 h-8 text-amber-600" />
+                          ) : (
+                            <FileText className="w-8 h-8 text-blue-600" />
+                          )}
+                        </div>
+                        <div className="max-w-md space-y-1.5">
+                          <h4 className="text-base font-bold text-m3-on-surface">{currentDoc.name}</h4>
+                          <p className="text-xs text-m3-secondary leading-relaxed">
+                            Dokumen perkuliahan berformat {currentDoc.name.split(".").pop()?.toUpperCase() || "Office"}. Berkas ini tersimpan aman di server lokal.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 pt-2">
+                          <a
+                            href={currentDoc.originalPath || getDocFileUrl(currentDoc)}
+                            download={currentDoc.name}
+                            className="min-h-[44px] px-6 py-2.5 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs flex items-center gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            <span>Unduh Berkas</span>
+                          </a>
+                        </div>
                       </div>
-                      <div className="max-w-md space-y-1.5">
-                        <h4 className="text-base font-bold text-m3-on-surface">{currentDoc.name}</h4>
-                        <p className="text-xs text-m3-secondary leading-relaxed">
-                          Dokumen perkuliahan berformat {currentDoc.name.split(".").pop()?.toUpperCase() || "Office"}. Berkas ini tersimpan aman di server lokal dan siap dibuka di aplikasi dokumen komputer Anda.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 pt-2">
-                        <a
-                          href={getDocFileUrl(currentDoc)}
-                          download={currentDoc.name}
-                          className="min-h-[44px] px-6 py-2.5 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs flex items-center gap-2"
-                        >
-                          <Download className="w-4 h-4" />
-                          <span>Unduh Berkas</span>
-                        </a>
-                      </div>
-                    </div>
-                  )}
+                    );
+                  })()}
                 </div>
 
-                {/* METADATA DOKUMEN ASLI (TANPA KOP SURAT TIRUAN) */}
+                {/* METADATA DOKUMEN ASLI */}
                 <div className="p-3 bg-m3-surface-container-low border border-m3-outline-variant rounded-2xl flex flex-wrap items-center justify-between gap-2 text-xs">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-bold text-m3-on-surface">{currentDoc.name}</span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white text-m3-primary border border-m3-outline-variant uppercase">
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 text-m3-primary border border-m3-outline-variant uppercase">
                       {currentDoc.name.split(".").pop() || currentDoc.type}
                     </span>
+                    {currentDoc.previewPath && !currentDoc.name.toLowerCase().endsWith(".pdf") && (
+                      <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                        Pratinjau PDF Aktif
+                      </span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-3 text-m3-secondary text-[11px]">
-                    <span>Diperbarui: {currentDoc.updated}</span>
+                  <div className="flex items-center gap-2 text-m3-secondary text-[11px] flex-wrap">
+                    {currentDoc.originalPath && (
+                      <a
+                        href={currentDoc.originalPath}
+                        download={currentDoc.name}
+                        className="px-3 py-1.5 rounded-xl bg-m3-surface-container hover:bg-m3-surface-container-high border border-m3-outline-variant text-m3-on-surface text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+                        title="Unduh format dokumen asli yang dapat diedit"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Unduh Format Asli ({currentDoc.name.split(".").pop()?.toUpperCase()})</span>
+                      </a>
+                    )}
+                    {(currentDoc.previewPath || currentDoc.type === "pdf") && (
+                      <a
+                        href={currentDoc.previewPath || getDocFileUrl(currentDoc)}
+                        download={`${currentDoc.name.replace(/\.[^/.]+$/, "")}.pdf`}
+                        className="px-3 py-1.5 rounded-xl bg-m3-primary text-m3-on-primary text-[11px] font-bold flex items-center gap-1.5 hover:brightness-95 transition-all shadow-2xs cursor-pointer"
+                        title="Unduh versi dokumen PDF"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Unduh PDF</span>
+                      </a>
+                    )}
                   </div>
                 </div>
               </>
@@ -1668,12 +1752,32 @@ export default function OtherViews({
                 </label>
               </div>
 
+              {/* BAGIAN: SESI AKUN & LOGOUT */}
+              <div className="p-4 rounded-2xl bg-m3-surface-container/30 border border-m3-outline-variant/60 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <h4 className="text-xs font-bold text-m3-on-surface">Sesi Akun Mahasiswa</h4>
+                    <p className="text-[11px] text-m3-secondary">
+                      Sedang masuk sebagai <span className="font-semibold text-m3-primary">{formData.name || "Mahasiswa"}</span> ({formData.nim || "Uji Mandiri"}).
+                    </p>
+                  </div>
+                  {onLogout && (
+                    <button
+                      type="button"
+                      onClick={onLogout}
+                      className="px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 text-xs font-bold hover:bg-rose-100 dark:hover:bg-rose-900/60 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <LogOut className="w-3.5 h-3.5" />
+                      <span>Keluar / Ganti Akun</span>
+                    </button>
+                  )}
+                </div>
+              </div>
 
-
-              {/* Zona Bahaya: Reset Bersih */}
-              <div className="p-4 rounded-2xl bg-rose-50/60 border border-rose-200/80 space-y-2">
-                <h4 className="text-xs font-bold text-rose-900">Manajemen Database & Reset Bersih</h4>
-                <p className="text-[11px] text-rose-700 leading-relaxed">
+              {/* Zona Pengaturan Data: Reset Bersih */}
+              <div className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/40 space-y-2">
+                <h4 className="text-xs font-bold text-rose-900 dark:text-rose-200">Manajemen Database & Reset Bersih</h4>
+                <p className="text-[11px] text-rose-700 dark:text-rose-300 leading-relaxed">
                   Kosongkan seluruh data tugas, jadwal kalender, dan materi untuk memulai kembali dengan catatan bersih tanpa data dummy.
                 </p>
                 <button
@@ -1693,7 +1797,7 @@ export default function OtherViews({
                       }
                     }
                   }}
-                  className="px-4 py-2 rounded-xl bg-white border border-rose-300 text-rose-700 hover:bg-rose-100 text-xs font-bold transition-colors shadow-xs"
+                  className="px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold transition-colors shadow-xs cursor-pointer"
                 >
                   Kosongkan Seluruh Data / Reset Bersih
                 </button>
@@ -2252,7 +2356,21 @@ export default function OtherViews({
       {activeTab === "quiz" && (
         <QuizSection
           profile={profile}
-          courses={Array.from(new Set([...schedules.map((s) => s.course), ...courseLecturers.map((cl) => cl.courseName)].filter(Boolean)))}
+          courses={Array.from(new Set([
+            ...schedules.map((s) => s.course),
+            ...courseLecturers.map((cl) => cl.courseName),
+            ...rawUploadedDocs.map((d: any) => d.course),
+            "Analisis dan Desain Sistem Informasi",
+            "Grafika Komputer",
+            "Kecerdasan Buatan",
+            "Manajemen Proyek TIK",
+            "Metode Numerik",
+            "Pemrograman Basis Data",
+            "Pemrograman Visual",
+            "Pemrograman Web Lanjut",
+            "Sistem Terdistribusi",
+            "Desain UI/UX",
+          ].filter(Boolean)))}
           tasks={tasks}
           uploadedDocs={rawUploadedDocs.map((d: any) => ({
             id: d.id,

@@ -12,6 +12,7 @@ import {
   Settings,
   Layers,
   ChevronRight,
+  LogOut,
 } from "lucide-react";
 import { StudentProfile } from "./OtherViews";
 
@@ -29,6 +30,7 @@ interface SidebarProps {
   activeTab: NavTab;
   onSelectTab: (tab: NavTab) => void;
   profile?: StudentProfile;
+  onLogout?: () => void;
 }
 
 interface NavItem {
@@ -47,15 +49,16 @@ const mainNavItems: NavItem[] = [
 ];
 
 const bottomNavItems: NavItem[] = [
-  { id: "akun", label: "Akun & Profil", icon: User },
-  { id: "setting", label: "Pengaturan", icon: Settings },
+  { id: "setting", label: "Pengaturan & Akun", icon: Settings },
 ];
 
 export default function Sidebar({
   activeTab,
   onSelectTab,
   profile,
+  onLogout,
 }: SidebarProps) {
+  const [showProfileMenu, setShowProfileMenu] = React.useState(false);
   const studentName = profile?.name || "Mahasiswa";
   const studentMajor = profile?.faculty || profile?.major || "Program Studi";
   const studentSemester = profile?.semester || 1;
@@ -71,7 +74,7 @@ export default function Sidebar({
     : mainNavItems;
 
   return (
-    <aside className="w-64 h-full bg-white rounded-[28px] sm:rounded-[32px] border border-slate-200/80 shadow-[0_2px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between p-4 overflow-y-auto">
+    <aside className="w-64 h-full bg-white dark:bg-m3-surface-container-low rounded-[28px] sm:rounded-[32px] border border-slate-200/80 dark:border-m3-outline-variant shadow-[0_2px_16px_rgba(0,0,0,0.03)] flex flex-col justify-between p-4 overflow-y-auto relative">
       {/* Brand Header */}
       <div>
         <div className="flex items-center gap-3 px-3 py-2 mb-6">
@@ -110,10 +113,10 @@ export default function Sidebar({
       </div>
 
       {/* Bottom Navigation & Single Student Profile */}
-      <div className="pt-4 border-t border-m3-outline-variant space-y-1">
+      <div className="pt-4 border-t border-m3-outline-variant space-y-1 relative">
         {bottomNavItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeTab === item.id;
+          const isActive = activeTab === item.id || (item.id === "setting" && activeTab === "akun");
           return (
             <button
               key={item.id}
@@ -130,11 +133,47 @@ export default function Sidebar({
           );
         })}
 
+        {/* Profile Popover Menu */}
+        {showProfileMenu && (
+          <div className="absolute bottom-16 left-0 right-0 bg-white dark:bg-m3-surface-container-high border border-m3-outline-variant rounded-2xl shadow-xl p-2 z-50 space-y-1 animate-in fade-in zoom-in-95">
+            <div className="px-3 py-2 border-b border-m3-outline-variant/60">
+              <p className="text-xs font-bold text-m3-on-surface truncate">{studentName}</p>
+              <p className="text-[10px] text-m3-secondary truncate">{profile?.nim || "Mahasiswa Aktif"}</p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowProfileMenu(false);
+                onSelectTab("setting");
+              }}
+              className="w-full px-3 py-2 text-xs font-semibold text-m3-on-surface hover:bg-m3-surface-container rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+            >
+              <Settings className="w-3.5 h-3.5 text-m3-primary" />
+              <span>Buka Pengaturan & Akun</span>
+            </button>
+
+            {onLogout && (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  onLogout();
+                }}
+                className="w-full px-3 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Keluar / Ganti Akun</span>
+              </button>
+            )}
+          </div>
+        )}
+
         {/* Student Mini Profile Card */}
         <div
-          onClick={() => onSelectTab("akun")}
+          onClick={() => setShowProfileMenu(!showProfileMenu)}
           className="mt-3 p-3 bg-m3-surface-container-low rounded-2xl border border-m3-outline-variant flex items-center justify-between cursor-pointer hover:bg-m3-surface-container transition-all group min-h-[52px]"
-          title="Buka Pengaturan Akun Mahasiswa"
+          title="Klik untuk opsi profil & logout"
         >
           <div className="flex items-center gap-2.5 overflow-hidden">
             {profile?.photoUrl ? (
@@ -160,7 +199,7 @@ export default function Sidebar({
             </div>
           </div>
 
-          <ChevronRight className="w-4 h-4 text-m3-secondary group-hover:text-m3-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+          <ChevronRight className={`w-4 h-4 text-m3-secondary group-hover:text-m3-primary transition-all flex-shrink-0 ${showProfileMenu ? "rotate-90" : "group-hover:translate-x-0.5"}`} />
         </div>
       </div>
     </aside>

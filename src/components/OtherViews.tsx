@@ -110,6 +110,7 @@ interface OtherViewsProps {
   } | null;
   selectedCourseForRps?: string;
   onLogout?: () => void;
+  onOpenOnboarding?: () => void;
 }
 
 // Data structures for RPS Folder Tree & Document Preview (40/60)
@@ -178,6 +179,7 @@ export default function OtherViews({
   newUploadedDoc,
   selectedCourseForRps,
   onLogout,
+  onOpenOnboarding,
 }: OtherViewsProps) {
   const [formData, setFormData] = useState<StudentProfile>(profile);
   const [isSaved, setIsSaved] = useState(false);
@@ -1418,10 +1420,23 @@ export default function OtherViews({
       {/* TAB AKUN & SETTING (HALAMAN TUNGGAL PANJANG DIPISAH GARIS) */}
       {(activeTab === "akun" || activeTab === "setting") && (
         <div className="max-w-3xl mx-auto w-full space-y-6">
+          {/* Floating Toast Notification on Save (Visible from any scroll position) */}
           {isSaved && (
-            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600" />
-              <span>Profil mahasiswa dan preferensi sistem berhasil disimpan!</span>
+            <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-5 py-3.5 rounded-2xl bg-emerald-700 text-white shadow-2xl border border-emerald-500 animate-in fade-in slide-in-from-bottom-4 duration-200">
+              <CheckCircle2 className="w-5 h-5 flex-shrink-0 text-emerald-200" />
+              <div>
+                <p className="text-xs font-bold">Pengaturan Berhasil Disimpan</p>
+                <p className="text-[11px] text-emerald-100">
+                  Profil dan preferensi akademik Anda telah tersimpan di database.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {isSaved && (
+            <div className="p-4 rounded-2xl bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-300 dark:border-emerald-800 text-emerald-900 dark:text-emerald-200 text-xs font-semibold flex items-center gap-2.5 shadow-sm animate-in fade-in duration-150">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <span>Profil mahasiswa dan preferensi sistem berhasil disimpan ke database!</span>
             </div>
           )}
 
@@ -1804,14 +1819,37 @@ export default function OtherViews({
               </div>
             </div>
 
-            {/* TOMBOL SIMPAN */}
-            <div className="pt-4 border-t border-m3-outline-variant/60 flex items-center justify-end">
+            {/* TOMBOL SIMPAN & ONBOARDING */}
+            <div className="pt-4 border-t border-m3-outline-variant/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              {onOpenOnboarding ? (
+                <button
+                  type="button"
+                  onClick={onOpenOnboarding}
+                  className="px-4 py-2 rounded-xl bg-m3-surface-container border border-m3-outline-variant text-m3-secondary hover:text-m3-on-surface text-xs font-semibold transition-colors cursor-pointer self-start sm:self-auto"
+                >
+                  Buka Setup Awal (Semester & Pekan Ke-1)
+                </button>
+              ) : <div />}
+
               <button
                 type="submit"
-                className="min-h-[44px] px-6 py-2.5 rounded-full bg-m3-primary text-m3-on-primary text-xs font-bold hover:brightness-95 transition-all shadow-xs flex items-center gap-2"
+                className={`min-h-[44px] px-6 py-2.5 rounded-full text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer ${
+                  isSaved
+                    ? "bg-emerald-600 text-white ring-2 ring-emerald-400"
+                    : "bg-m3-primary text-m3-on-primary hover:brightness-95"
+                }`}
               >
-                <Save className="w-4 h-4" />
-                <span>Simpan Perubahan Akun & Pengaturan</span>
+                {isSaved ? (
+                  <>
+                    <CheckCircle2 className="w-4 h-4 text-white" />
+                    <span>Perubahan Berhasil Disimpan!</span>
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    <span>Simpan Perubahan Akun & Pengaturan</span>
+                  </>
+                )}
               </button>
             </div>
           </form>

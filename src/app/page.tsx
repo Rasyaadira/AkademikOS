@@ -10,6 +10,7 @@ import QuickTaskModal from "@/components/QuickTaskModal";
 import UploadDocModal from "@/components/UploadDocModal";
 import OtherViews, { StudentProfile } from "@/components/OtherViews";
 import LoginPage from "@/components/LoginPage";
+import FirstTimeOnboardingModal from "@/components/FirstTimeOnboardingModal";
 import { TaskItem } from "@/components/ActionDeck";
 import { Menu, X, CalendarDays } from "lucide-react";
 
@@ -19,6 +20,7 @@ export default function HomeDashboard() {
   const [isQuickTaskOpen, setIsQuickTaskOpen] = useState(false);
   const [isUploadDocOpen, setIsUploadDocOpen] = useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string>("student-clean");
   const [droppedFile, setDroppedFile] = useState<File | null>(null);
 
@@ -81,6 +83,15 @@ export default function HomeDashboard() {
           setProfile(profData);
           if (profData.darkMode !== undefined) {
             document.documentElement.classList.toggle("dark", !!profData.darkMode);
+          }
+          // Periksa apakah pengguna baru pertama kali masuk
+          try {
+            const hasCompleted = localStorage.getItem("akademikos_onboarding_completed");
+            if (!hasCompleted && (!profData.name || profData.name === "Mahasiswa")) {
+              setIsOnboardingOpen(true);
+            }
+          } catch (e) {
+            console.warn("Storage warning:", e);
           }
         }
       }
@@ -277,6 +288,9 @@ export default function HomeDashboard() {
     if (updated.darkMode !== undefined) {
       document.documentElement.classList.toggle("dark", !!updated.darkMode);
     }
+    setBannerNotice(`Pengaturan & profil "${updated.name || "mahasiswa"}" berhasil disimpan.`);
+    setTimeout(() => setBannerNotice(null), 4000);
+
     try {
       await fetch("/api/profile", {
         method: "PUT",
@@ -286,6 +300,16 @@ export default function HomeDashboard() {
     } catch (err) {
       console.error("Failed to update profile in DB:", err);
     }
+  };
+
+  // Handle first time onboarding completion
+  const handleOnboardingComplete = async (data: Partial<StudentProfile>) => {
+    const updated = { ...profile, ...data };
+    await handleUpdateProfile(updated);
+    setBannerNotice(
+      `Selamat datang di AkademikOS, ${data.name}! Semester ${data.semester} berhasil disinkronkan ke Minggu Ke-1.`
+    );
+    setTimeout(() => setBannerNotice(null), 5000);
   };
 
   // Direct Drag and Drop file handler
@@ -533,6 +557,7 @@ export default function HomeDashboard() {
             newUploadedDoc={newUploadedDoc}
             selectedCourseForRps={selectedCourseForRps}
             onLogout={handleLogout}
+            onOpenOnboarding={() => setIsOnboardingOpen(true)}
           />
         )}
       </main>
@@ -575,6 +600,14 @@ export default function HomeDashboard() {
           }}
         />
       )}
+
+      {/* First Time Welcome / Onboarding Modal */}
+      <FirstTimeOnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        onComplete={handleOnboardingComplete}
+        currentProfile={profile}
+      />
     </div>
   );
 }

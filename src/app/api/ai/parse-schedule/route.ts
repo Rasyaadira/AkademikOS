@@ -4,6 +4,7 @@ import path from "path";
 import { execFile } from "child_process";
 import { promisify } from "util";
 import { extractScheduleWithGemini } from "@/lib/gemini";
+import { extractScheduleWithDeepSeek } from "@/lib/deepseek";
 import db, { DEFAULT_USER_ID } from "@/lib/db";
 
 const execFileAsync = promisify(execFile);
@@ -81,17 +82,26 @@ export async function POST(req: NextRequest) {
     let detectedSemester = "";
 
     if (extractedText) {
-      // Cari pola "Kelas: TI 1A" atau "KELAS: 3A" dsb
-      const classMatches = extractedText.matchAll(/(?:Kelas|KELAS|Kls)\s*:\s*([A-Za-z0-9\-\/ ]{2,20})/gi);
+      // Cari pola "Kelas: TI 1A" atau "KELAS: 3A" atau "Rombel: 3A"
+      const classMatches = extractedText.matchAll(/(?:Kelas|KELAS|Kls|Rombel|Tingkat)\s*[:\-\s]\s*([A-Za-z0-9\-\/ ]{1,15})/gi);
       for (const m of classMatches) {
         const cleanName = m[1].trim().replace(/[\r\n].*$/, "").trim();
-        if (cleanName && !detectedClasses.includes(cleanName) && cleanName.length < 25) {
+        if (cleanName && !detectedClasses.includes(cleanName) && cleanName.length <= 15) {
           detectedClasses.push(cleanName);
         }
       }
 
+      // Cari token kelas umum di kampus (contoh: 3A, 3B, TI-3A, IF-2B, dsb)
+      const tokenMatches = extractedText.matchAll(/\b([1-8]\s*[A-E]|[A-Za-z]{2,5}[-\s]?[1-8][A-E]?)\b/g);
+      for (const tm of tokenMatches) {
+        const val = tm[1].trim().toUpperCase();
+        if (val && !detectedClasses.includes(val) && detectedClasses.length < 8 && val.length <= 10) {
+          detectedClasses.push(val);
+        }
+      }
+
       // Deteksi semester
-      const semMatch = extractedText.match(/(?:SEMESTER|Semester)\s+(?:GANJIL|GENAP|GASAL|[0-9]+)\s+[0-9]{4}\/[0-9]{4}/i);
+      const semMatch = extractedText.match(/(?:SEMESTER|Semester)\s+(?:GANJIL|GENAP|GASAL|[0-9IVX]+)(?:\s+[0-9]{4}\/[0-9]{4})?/i);
       if (semMatch) {
         detectedSemester = semMatch[0].trim();
       }
@@ -103,40 +113,95 @@ export async function POST(req: NextRequest) {
         success: true,
         detectedClasses,
         detectedSemester: detectedSemester || "Semester Ganjil 2026/2027",
-        hasMultipleClasses: detectedClasses.length > 1,
+        hasMultipleClasses: detectedClasses.length > 0,
       });
     }
 
-    // 3. Ekstraksi Jadwal Kuliah dengan Gemini AI
+    // 3. Ekstraksi Jadwal Kuliah dengan DeepSeek AI (Primary) dan Gemini (Fallback)
     let courses: any[] = [];
 
-    if (isImage) {
-      const imageBuffer = fs.readFileSync(filePath);
-      const base64Data = imageBuffer.toString("base64");
-      const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
+    // Jika target kelas dipilih "Semua Kelas" atau kosong, jangan filter kelas
+    const isExtractAll = !className || className.toLowerCase().includes("semua") || className.toLowerCase().includes("seluruh");
+    const targetClass = isExtractAll ? "" : className;
 
-      courses = await extractScheduleWithGemini(base64Data, {
-        className,
-        semesterYear: semesterYear || detectedSemester,
-        isImageBase64: true,
-        mimeType,
-      });
-    } else if (extractedText) {
-      let textForGemini = extractedText;
-      if (className) {
-        const classRegex = new RegExp(`(?:Kelas|KELAS)\\s*:\\s*${className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, "i");
-        const parts = extractedText.split(classRegex);
-        if (parts.length > 1) {
-          const afterClass = parts[1];
-          const nextClassParts = afterClass.split(/(?:Kelas|KELAS)\s*:/i);
-          textForGemini = `KELAS: ${className}\n` + nextClassParts[0];
+    if (extractedText) {
+      // 3A. Gunakan DeepSeek AI (Sangat cepat & handal untuk ekstraksi teks/PDF)
+      try {
+        let textForAi = extractedText;
+        if (targetClass) {
+          const classRegex = new RegExp(`(?:Kelas|KELAS)\\s*:\\s*${targetClass.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, "i");
+          const parts = extractedText.split(classRegex);
+          if (parts.length > 1) {
+            const afterClass = parts[1];
+            const nextClassParts = afterClass.split(/(?:Kelas|KELAS)\s*:/i);
+            textForAi = `KELAS: ${targetClass}\n` + nextClassParts[0];
+          }
         }
+
+        courses = await extractScheduleWithDeepSeek(textForAi, {
+          className: targetClass,
+          semesterYear: semesterYear || detectedSemester,
+        });
+      } catch (dsErr) {
+        console.warn("DeepSeek extraction failed, falling back to Gemini:", dsErr);
       }
 
-      courses = await extractScheduleWithGemini(textForGemini, {
-        className: className || detectedClasses[0] || "Semua Kelas",
-        semesterYear: semesterYear || detectedSemester,
-      });
+      // 3B. Fallback ke Gemini jika DeepSeek gagal atau kosong
+      if (courses.length === 0) {
+        try {
+          courses = await extractScheduleWithGemini(extractedText, {
+            className: targetClass || detectedClasses[0] || "Semua Kelas",
+            semesterYear: semesterYear || detectedSemester,
+          });
+        } catch (gemErr) {
+          console.warn("Gemini extraction also failed:", gemErr);
+        }
+      }
+    } else if (isImage) {
+      // 3C. Jika berkas berupa foto/gambar, gunakan Gemini multimodal
+      try {
+        const imageBuffer = fs.readFileSync(filePath);
+        const base64Data = imageBuffer.toString("base64");
+        const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
+
+        courses = await extractScheduleWithGemini(base64Data, {
+          className: targetClass,
+          semesterYear: semesterYear || detectedSemester,
+          isImageBase64: true,
+          mimeType,
+        });
+      } catch (imgErr) {
+        console.warn("Gemini multimodal image extraction failed:", imgErr);
+      }
+    }
+
+    // 3D. Jika AI mengembalikan kosong karena jadwal tabel rapat, coba cari baris mata kuliah heuristik
+    if (courses.length === 0 && extractedText) {
+      const lines = extractedText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const possibleDays = ["senin", "selasa", "rabu", "kamis", "jumat", "sabtu"];
+      let curDay = "senin";
+      for (const line of lines) {
+        const lower = line.toLowerCase();
+        for (const d of possibleDays) {
+          if (lower.startsWith(d)) curDay = d;
+        }
+        // Cari jam format 08.00 - 10.30
+        const timeMatch = line.match(/(\d{1,2}[:.]\d{2})\s*[-–s.d]+\s*(\d{1,2}[:.]\d{2})/);
+        if (timeMatch && line.length > 15) {
+          const rawCourse = line.replace(timeMatch[0], "").replace(/senin|selasa|rabu|kamis|jumat|sabtu/gi, "").trim();
+          if (rawCourse.length >= 3 && !rawCourse.toLowerCase().includes("istirahat")) {
+            courses.push({
+              course: rawCourse.slice(0, 40).replace(/^[0-9.\-\s]+/, ""),
+              day: curDay,
+              startTime: timeMatch[1].replace(":", "."),
+              endTime: timeMatch[2].replace(":", "."),
+              room: "Ruang Kuliah",
+              lecturer: "Dosen Pengampu",
+              sks: 3,
+            });
+          }
+        }
+      }
     }
 
     // 4. Auto-save ke Database jika diminta

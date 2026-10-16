@@ -22,16 +22,19 @@ interface ImportScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScheduleImported: (schedules: ScheduleItem[]) => void;
+  initialFile?: File | null;
 }
 
 export default function ImportScheduleModal({
   isOpen,
   onClose,
   onScheduleImported,
+  initialFile,
 }: ImportScheduleModalProps) {
   const [file, setFile] = useState<File | null>(null);
   const [filePath, setFilePath] = useState<string | null>(null);
   const [step, setStep] = useState<"upload" | "filter" | "review">("upload");
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   // Step 2: Filter Questions
   const [detectedClasses, setDetectedClasses] = useState<string[]>([]);
@@ -47,6 +50,13 @@ export default function ImportScheduleModal({
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [statusMessage, setStatusMessage] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Auto-process initialFile if passed via Drag & Drop on Calendar
+  React.useEffect(() => {
+    if (isOpen && initialFile && !file) {
+      handleFileSelect(initialFile);
+    }
+  }, [isOpen, initialFile]);
 
   if (!isOpen) return null;
 
@@ -69,18 +79,21 @@ export default function ImportScheduleModal({
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Gagal menginspeksi berkas");
 
-      const classes = data.detectedClasses || [];
-      setDetectedClasses(classes);
-      if (classes.length > 0) {
-        setSelectedClass(classes[0]);
-      }
+      const rawClasses = data.detectedClasses || [];
+      const allClasses = Array.from(new Set(["Semua Kelas (Ekstrak Seluruh Jadwal)", ...rawClasses]));
+      setDetectedClasses(allClasses);
+      setSelectedClass(allClasses[0]);
+
       if (data.detectedSemester) {
         setSemesterYear(data.detectedSemester);
       }
       setStep("filter");
     } catch (err: any) {
       console.error("Inspect error:", err);
-      setErrorMsg(err.message || "Gagal memproses berkas jadwal");
+      // Fallback: don't block user, go to filter with default options
+      setDetectedClasses(["Semua Kelas (Ekstrak Seluruh Jadwal)"]);
+      setSelectedClass("Semua Kelas (Ekstrak Seluruh Jadwal)");
+      setStep("filter");
     } finally {
       setIsLoading(false);
       setStatusMessage("");
@@ -90,11 +103,12 @@ export default function ImportScheduleModal({
   const handleExtractWithAi = async () => {
     if (!file) return;
 
-    const finalClass = customClass.trim() || selectedClass || "Kelas Utama";
+    const isAll = !selectedClass || selectedClass.includes("Semua Kelas") || selectedClass.includes("Seluruh");
+    const finalClass = customClass.trim() || (isAll ? "" : selectedClass);
 
     setIsLoading(true);
     setErrorMsg(null);
-    setStatusMessage(`Gemini AI sedang membaca dan mengekstrak jadwal kelas ${finalClass}...`);
+    setStatusMessage(`AI sedang membaca dan mengekstrak jadwal perkuliahan...`);
 
     try {
       const formData = new FormData();
@@ -113,7 +127,11 @@ export default function ImportScheduleModal({
 
       const courses = data.courses || [];
       if (courses.length === 0) {
-        throw new Error(`Tidak ditemukan mata kuliah untuk kelas "${finalClass}". Coba pilih nama kelas lain.`);
+        throw new Error(
+          finalClass
+            ? `Tidak ditemukan mata kuliah untuk kelas "${finalClass}". Coba pilih "Semua Kelas" atau periksa format berkas.`
+            : "Tidak ada jadwal mata kuliah yang terbaca dari berkas ini. Pastikan berkas berisi tabel jadwal yang jelas."
+        );
       }
 
       setExtractedCourses(courses);
@@ -238,7 +256,36 @@ export default function ImportScheduleModal({
         {/* STEP 1: UPLOAD FILE */}
         {step === "upload" && (
           <div className="space-y-4">
-            <label className="border-2 border-dashed border-m3-outline rounded-3xl p-8 sm:p-10 flex flex-col items-center justify-center text-center cursor-pointer hover:border-m3-primary transition-colors bg-m3-surface-container-low/50">
+            <label
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(true);
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsDragging(false);
+                if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                  handleFileSelect(e.dataTransfer.files[0]);
+                }
+              }}
+              className={`border-2 border-dashed rounded-3xl p-8 sm:p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+                isDragging
+                  ? "border-m3-primary bg-m3-primary-container/20 scale-[1.01]"
+                  : "border-m3-outline hover:border-m3-primary bg-m3-surface-container-low/50"
+              }`}
+            >
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png,.webp"
@@ -253,7 +300,7 @@ export default function ImportScheduleModal({
                 <UploadCloud className="w-7 h-7" />
               </div>
               <p className="text-sm font-bold text-m3-on-surface">
-                Pilih atau seret berkas Jadwal Kuliah (PDF / Foto JPG/PNG)
+                {isDragging ? "Lepaskan berkas jadwal di sini!" : "Pilih atau seret berkas Jadwal Kuliah (PDF / Foto JPG/PNG)"}
               </p>
               <p className="text-xs text-m3-secondary mt-1">
                 Bisa berupa dokumen jadwal resmi kampus satu jurusan (multi-halaman) atau screenshot foto jadwal
@@ -371,7 +418,7 @@ export default function ImportScheduleModal({
                 className="px-5 py-2.5 rounded-full text-xs font-bold bg-m3-primary text-m3-on-primary hover:brightness-95 transition-all shadow-xs flex items-center gap-2 disabled:opacity-50"
               >
                 <Sparkles className="w-4 h-4" />
-                <span>Mulai Ekstraksi dengan Gemini AI</span>
+                <span>Ekstrak Jadwal Otomatis dengan AI</span>
               </button>
             </div>
           </div>

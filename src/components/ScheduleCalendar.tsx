@@ -21,6 +21,7 @@ import {
   Loader2,
   ZoomOut,
   AlertCircle,
+  UploadCloud,
 } from "lucide-react";
 import { TaskItem } from "./ActionDeck";
 import ImportScheduleModal from "./ImportScheduleModal";
@@ -138,6 +139,8 @@ export default function ScheduleCalendar({
   // Add & Import Schedule state
   const [isAddScheduleOpen, setIsAddScheduleOpen] = useState(false);
   const [isImportScheduleOpen, setIsImportScheduleOpen] = useState(false);
+  const [droppedFileForImport, setDroppedFileForImport] = useState<File | null>(null);
+  const [isDraggingScheduleFile, setIsDraggingScheduleFile] = useState(false);
   const [newCourse, setNewCourse] = useState("");
   const [newRoom, setNewRoom] = useState("");
   const [newDay, setNewDay] = useState(currentSysDay);
@@ -566,8 +569,50 @@ export default function ScheduleCalendar({
 
   return (
     <div
-      className="bg-m3-surface-container-low border border-m3-outline-variant rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs flex flex-col relative flex-1 h-full min-h-[620px]"
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes("Files")) {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDraggingScheduleFile(true);
+        }
+      }}
+      onDragEnter={(e) => {
+        if (e.dataTransfer.types.includes("Files")) {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDraggingScheduleFile(true);
+        }
+      }}
+      onDragLeave={(e) => {
+        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+        setIsDraggingScheduleFile(false);
+      }}
+      onDrop={(e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          e.preventDefault();
+          e.stopPropagation();
+          setIsDraggingScheduleFile(false);
+          const dropped = e.dataTransfer.files[0];
+          setDroppedFileForImport(dropped);
+          setIsImportScheduleOpen(true);
+        }
+      }}
+      className={`bg-m3-surface-container-low border rounded-3xl p-5 sm:p-6 space-y-4 shadow-xs flex flex-col relative flex-1 h-full min-h-[620px] transition-all ${
+        isDraggingScheduleFile
+          ? "border-indigo-500 ring-4 ring-indigo-500/20"
+          : "border-m3-outline-variant"
+      }`}
     >
+      {/* File Drag & Drop Overlay */}
+      {isDraggingScheduleFile && (
+        <div className="absolute inset-0 z-50 bg-indigo-950/75 backdrop-blur-xs rounded-3xl border-2 border-dashed border-indigo-400 flex flex-col items-center justify-center p-6 text-white pointer-events-none animate-in fade-in duration-150">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg mb-3">
+            <UploadCloud className="w-8 h-8" />
+          </div>
+          <p className="text-base font-bold">Lepaskan Berkas Jadwal Kuliah di Sini</p>
+          <p className="text-xs text-indigo-200 mt-1">AkademikOS akan mengekstrak semua jadwal mata kuliah secara otomatis</p>
+        </div>
+      )}
       {/* Top Header: Controls with Prev/Next Navigation (Tombol Kanan Kiri) + View Mode */}
       <div className="flex flex-col gap-3 flex-shrink-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -755,16 +800,19 @@ export default function ScheduleCalendar({
             </div>
 
 
-            {/* Tombol Impor Jadwal AI (Hanya jika jadwal masih kosong dan AI mode aktif) */}
-            {!noAiMode && schedules.length === 0 && (
+            {/* Tombol Impor Jadwal AI (Selalu tampil agar bisa digunakan kapan saja) */}
+            {!noAiMode && (
               <button
                 type="button"
-                onClick={() => setIsImportScheduleOpen(true)}
-                className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all shadow-2xs"
+                onClick={() => {
+                  setDroppedFileForImport(null);
+                  setIsImportScheduleOpen(true);
+                }}
+                className="flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all shadow-xs cursor-pointer"
                 title="Unggah berkas PDF atau foto jadwal kuliah untuk diekstrak otomatis"
               >
-                <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-                <span>Impor AI</span>
+                <UploadCloud className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Impor Jadwal AI</span>
               </button>
             )}
 
@@ -1802,10 +1850,14 @@ export default function ScheduleCalendar({
         </div>
       )}
 
-      {/* MODAL IMPOR JADWAL DENGAN GEMINI AI */}
+      {/* MODAL IMPOR JADWAL DENGAN GEMINI / DEEPSEEK AI */}
       <ImportScheduleModal
         isOpen={isImportScheduleOpen}
-        onClose={() => setIsImportScheduleOpen(false)}
+        initialFile={droppedFileForImport}
+        onClose={() => {
+          setIsImportScheduleOpen(false);
+          setDroppedFileForImport(null);
+        }}
         onScheduleImported={(newItems) => {
           newItems.forEach((item) => onAddSchedule?.(item));
         }}

@@ -257,3 +257,87 @@ Output WAJIB berupa JSON valid:
 
   throw new Error("Format respons AI kuis tidak valid.");
 }
+
+export interface ExtractedCourseSchedule {
+  course: string;
+  day: "senin" | "selasa" | "rabu" | "kamis" | "jumat" | "sabtu" | "minggu";
+  startTime: string; // "07.30"
+  endTime: string; // "10.50"
+  room?: string;
+  lecturer?: string;
+  sks?: number;
+}
+
+/**
+ * Intelligent Schedule Extractor using DeepSeek AI
+ */
+export async function extractScheduleWithDeepSeek(
+  textContent: string,
+  options: {
+    className?: string;
+    semesterYear?: string;
+  } = {}
+): Promise<ExtractedCourseSchedule[]> {
+  const { className = "", semesterYear = "" } = options;
+
+  const isSpecificClass = className && !className.toLowerCase().includes("semua") && !className.toLowerCase().includes("seluruh");
+
+  const systemPrompt = `Anda adalah asisten AI ekstraksi jadwal perkuliahan kampus Indonesia.
+Tugas Anda adalah membaca teks dokumen jadwal dan mengekstrak semua jadwal mata kuliah menjadi JSON array.
+${isSpecificClass ? `Target Kelas: "${className}". Prioritaskan jadwal untuk kelas ini jika ada pembagian kelas.` : "Ekstrak SEMUA mata kuliah dan jadwal yang tertera di dokumen tanpa filter kelas."}
+${semesterYear ? `Semester/Tahun Akademik: "${semesterYear}".` : ""}
+
+ATURAN STRUKTUR JSON:
+1. Kembalikan array of objects JSON:
+[
+  {
+    "course": "Nama Mata Kuliah",
+    "day": "senin",
+    "startTime": "07.30",
+    "endTime": "10.50",
+    "room": "Ruang / Lab",
+    "lecturer": "Nama Dosen",
+    "sks": 3
+  }
+]
+2. "day" HARUS salah satu dari (huruf kecil): "senin", "selasa", "rabu", "kamis", "jumat", "sabtu".
+3. "startTime" dan "endTime" HARUS format jam "HH.MM" (contoh: "07.30", "08.00", "09.40", "10.30", "13.00", "15.00").
+4. Normalisasi nama mata kuliah (hapus singkatan berlebihan jika ada nama lengkapnya).
+5. Berikan format JSON murni.`;
+
+  const userPrompt = `Ekstrak jadwal perkuliahan dari teks berikut:\n\n=== TEKS JADWAL ===\n${textContent.slice(0, 15000)}`;
+
+  const rawJson = await callDeepSeekChat(
+    [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    { temperature: 0.1, jsonMode: true, maxTokens: 3000 }
+  );
+
+  let clean = rawJson.trim();
+  const arrayMatch = clean.match(/\[\s*\{[\s\S]*\}\s*\]/);
+  if (arrayMatch) {
+    clean = arrayMatch[0];
+  }
+
+  const parsed = JSON.parse(clean);
+  const list = Array.isArray(parsed)
+    ? parsed
+    : parsed.schedules || parsed.courses || parsed.data || [];
+
+  if (Array.isArray(list) && list.length > 0) {
+    return list.map((item: any) => ({
+      course: String(item.course || item.name || item.mataKuliah || "Mata Kuliah").trim(),
+      day: (String(item.day || item.hari || "senin").toLowerCase().trim() as any),
+      startTime: String(item.startTime || item.jamMulai || item.start || "08.00").trim().replace(":", "."),
+      endTime: String(item.endTime || item.jamSelesai || item.end || "10.00").trim().replace(":", "."),
+      room: item.room || item.ruang || item.ruangan ? String(item.room || item.ruang || item.ruangan).trim() : "Ruang Kuliah",
+      lecturer: item.lecturer || item.dosen ? String(item.lecturer || item.dosen).trim() : "Dosen Pengampu",
+      sks: item.sks ? Number(item.sks) : 3,
+    }));
+  }
+
+  return [];
+}
+

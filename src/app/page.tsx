@@ -84,10 +84,10 @@ export default function HomeDashboard() {
           if (profData.darkMode !== undefined) {
             document.documentElement.classList.toggle("dark", !!profData.darkMode);
           }
-          // Periksa apakah pengguna baru pertama kali masuk
+          // Periksa apakah pengguna baru pertama kali masuk atau baru saja reset
           try {
             const hasCompleted = localStorage.getItem("akademikos_onboarding_completed");
-            if (!hasCompleted && (!profData.name || profData.name === "Mahasiswa")) {
+            if (!hasCompleted) {
               setIsOnboardingOpen(true);
             }
           } catch (e) {
@@ -101,6 +101,17 @@ export default function HomeDashboard() {
   };
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get("setup") === "true") {
+        try {
+          localStorage.removeItem("akademikos_onboarding_completed");
+        } catch (e) {}
+        setActiveTab("home");
+        setIsOnboardingOpen(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    }
     loadUserData();
   }, []);
 

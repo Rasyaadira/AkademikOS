@@ -313,6 +313,27 @@ export function resetCleanDatabase() {
     DELETE FROM course_enrollments;
     DELETE FROM courses;
     DELETE FROM lecturers;
+    UPDATE profile SET
+      name = 'Mahasiswa',
+      nim = '',
+      email = '',
+      major = '',
+      faculty = '',
+      university = '',
+      semester = 1,
+      academic_advisor = '',
+      target_gpa = '4.00',
+      max_sks = 24,
+      photo_url = '',
+      semester_start_date = '',
+      ai_token_usage = 0
+    WHERE user_id = 'user-me';
+    UPDATE users SET
+      name = 'Mahasiswa',
+      nim = '',
+      email = '',
+      avatar = ''
+    WHERE id = 'user-me';
     PRAGMA foreign_keys = ON;
   `);
 }

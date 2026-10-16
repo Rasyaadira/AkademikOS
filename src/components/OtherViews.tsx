@@ -1798,12 +1798,18 @@ export default function OtherViews({
                 <button
                   type="button"
                   onClick={async () => {
-                    if (window.confirm("Apakah Anda yakin ingin mengosongkan seluruh data tugas, jadwal, dan riwayat? Tindakan ini tidak dapat dibatalkan.")) {
+                    if (window.confirm("Apakah Anda yakin ingin mengosongkan seluruh data tugas, jadwal, dan riwayat? Sistem akan kembali ke Beranda dan membuka Setup Awal.")) {
                       try {
                         const res = await fetch("/api/reset", { method: "POST" });
                         if (res.ok) {
-                          alert("Database berhasil dikosongkan. Halaman akan dimuat ulang.");
-                          window.location.reload();
+                          try {
+                            localStorage.removeItem("akademikos_onboarding_completed");
+                            localStorage.removeItem("akademikos_active_tab");
+                            localStorage.clear();
+                          } catch (e) {
+                            console.warn("Storage clear error:", e);
+                          }
+                          window.location.href = "/?setup=true";
                         } else {
                           alert("Gagal mengosongkan database.");
                         }

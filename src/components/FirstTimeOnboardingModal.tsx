@@ -43,6 +43,18 @@ export default function FirstTimeOnboardingModal({
   const [university, setUniversity] = useState(currentProfile?.university || "");
   const [nim, setNim] = useState(currentProfile?.nim || "");
 
+  React.useEffect(() => {
+    if (isOpen) {
+      setName(currentProfile?.name && currentProfile.name !== "Mahasiswa" ? currentProfile.name : "");
+      setSemester(currentProfile?.semester || 1);
+      setMajor(currentProfile?.major || "");
+      setUniversity(currentProfile?.university || "");
+      setNim(currentProfile?.nim || "");
+      setIsCurrentWeekWeekOne(true);
+      setCustomStartDate(currentProfile?.semesterStartDate || getMondayCurrentWeek());
+    }
+  }, [isOpen, currentProfile]);
+
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {

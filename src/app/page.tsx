@@ -12,7 +12,7 @@ import OtherViews, { StudentProfile } from "@/components/OtherViews";
 import LoginPage from "@/components/LoginPage";
 import FirstTimeOnboardingModal from "@/components/FirstTimeOnboardingModal";
 import { TaskItem } from "@/components/ActionDeck";
-import { Menu, X, CalendarDays } from "lucide-react";
+import { Menu, X, CalendarDays, User } from "lucide-react";
 
 export default function HomeDashboard() {
   const [activeTab, setActiveTab] = useState<NavTab>("home");
@@ -482,7 +482,17 @@ export default function HomeDashboard() {
                 </h2>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsOnboardingOpen(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-m3-surface-container hover:bg-m3-surface-container-high border border-m3-outline-variant text-m3-on-surface transition-colors cursor-pointer shadow-2xs"
+                  title="Buka form setup awal semester & pekan ke-1"
+                >
+                  <User className="w-3.5 h-3.5 text-m3-primary" />
+                  <span>Setup Awal</span>
+                </button>
+
                 <div className="flex items-center gap-2 text-xs bg-m3-surface-container-low border border-m3-outline-variant px-3 py-1.5 rounded-full">
                   <CalendarDays className="w-3.5 h-3.5 text-m3-secondary" />
                   <span className="text-m3-on-surface font-semibold">

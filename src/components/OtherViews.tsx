@@ -1809,7 +1809,24 @@ export default function OtherViews({
                           } catch (e) {
                             console.warn("Storage clear error:", e);
                           }
-                          window.location.href = "/?setup=true";
+                          // Reset state profile
+                          onUpdateProfile?.({
+                            name: "Mahasiswa",
+                            nim: "",
+                            email: "",
+                            major: "",
+                            faculty: "",
+                            university: "",
+                            semester: 1,
+                            academicAdvisor: "",
+                            targetGPA: "4.00",
+                            maxSKS: 24,
+                          });
+                          // Langsung alihkan ke Beranda dan buka Setup Awal
+                          onBackToHome?.();
+                          setTimeout(() => {
+                            onOpenOnboarding?.();
+                          }, 50);
                         } else {
                           alert("Gagal mengosongkan database.");
                         }

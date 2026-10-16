@@ -323,6 +323,40 @@ export default function HomeDashboard() {
     setTimeout(() => setBannerNotice(null), 5000);
   };
 
+  // Handle clean reset: wipe DB, clear localStorage, reset in-memory state, return to home, and trigger onboarding
+  const handleResetClean = async () => {
+    try {
+      await fetch("/api/reset", { method: "POST" });
+    } catch (err) {
+      console.error("Reset error:", err);
+    }
+    try {
+      localStorage.clear();
+      localStorage.removeItem("akademikos_onboarding_completed");
+      localStorage.removeItem("akademikos_active_tab");
+    } catch (e) {}
+
+    // Reset all local states
+    setTasks([]);
+    setSchedules([]);
+    setProfile({
+      name: "Mahasiswa",
+      nim: "",
+      email: "",
+      major: "",
+      faculty: "",
+      university: "",
+      semester: 1,
+      academicAdvisor: "",
+      targetGPA: "4.00",
+      maxSKS: 24,
+    });
+
+    // Go to home view and immediately open onboarding modal
+    setActiveTab("home");
+    setIsOnboardingOpen(true);
+  };
+
   // Direct Drag and Drop file handler
   const handleDirectFileDrop = (file: File) => {
     setDroppedFile(file);
@@ -579,6 +613,7 @@ export default function HomeDashboard() {
             selectedCourseForRps={selectedCourseForRps}
             onLogout={handleLogout}
             onOpenOnboarding={() => setIsOnboardingOpen(true)}
+            onResetClean={handleResetClean}
           />
         )}
       </main>

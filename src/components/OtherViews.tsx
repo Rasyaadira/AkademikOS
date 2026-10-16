@@ -111,6 +111,7 @@ interface OtherViewsProps {
   selectedCourseForRps?: string;
   onLogout?: () => void;
   onOpenOnboarding?: () => void;
+  onResetClean?: () => Promise<void> | void;
 }
 
 // Data structures for RPS Folder Tree & Document Preview (40/60)
@@ -180,9 +181,11 @@ export default function OtherViews({
   selectedCourseForRps,
   onLogout,
   onOpenOnboarding,
+  onResetClean,
 }: OtherViewsProps) {
   const [formData, setFormData] = useState<StudentProfile>(profile);
   const [isSaved, setIsSaved] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [showOpenCodeKey, setShowOpenCodeKey] = useState(false);
 
   // Sync external profile changes into local formData (including photoUrl)
@@ -1790,54 +1793,52 @@ export default function OtherViews({
               </div>
 
               {/* Zona Pengaturan Data: Reset Bersih */}
-              <div className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/40 space-y-2">
-                <h4 className="text-xs font-bold text-rose-900 dark:text-rose-200">Manajemen Database & Reset Bersih</h4>
+              <div className="p-4 rounded-2xl bg-rose-50/60 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-900/40 space-y-2.5">
+                <div className="flex items-center gap-2">
+                  <Trash2 className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                  <h4 className="text-xs font-bold text-rose-900 dark:text-rose-200">Manajemen Database & Reset Bersih</h4>
+                </div>
                 <p className="text-[11px] text-rose-700 dark:text-rose-300 leading-relaxed">
-                  Kosongkan seluruh data tugas, jadwal kalender, dan materi untuk memulai kembali dengan catatan bersih tanpa data dummy.
+                  Kosongkan seluruh data tugas, jadwal kalender, dan materi untuk memulai kembali dengan catatan bersih tanpa data dummy. Setelah tombol ditekan, sistem langsung kembali ke Beranda dan menampilkan form Setup Awal.
                 </p>
                 <button
                   type="button"
+                  disabled={isResetting}
                   onClick={async () => {
-                    if (window.confirm("Apakah Anda yakin ingin mengosongkan seluruh data tugas, jadwal, dan riwayat? Sistem akan kembali ke Beranda dan membuka Setup Awal.")) {
-                      try {
-                        const res = await fetch("/api/reset", { method: "POST" });
-                        if (res.ok) {
-                          try {
-                            localStorage.removeItem("akademikos_onboarding_completed");
-                            localStorage.removeItem("akademikos_active_tab");
-                            localStorage.clear();
-                          } catch (e) {
-                            console.warn("Storage clear error:", e);
-                          }
-                          // Reset state profile
-                          onUpdateProfile?.({
-                            name: "Mahasiswa",
-                            nim: "",
-                            email: "",
-                            major: "",
-                            faculty: "",
-                            university: "",
-                            semester: 1,
-                            academicAdvisor: "",
-                            targetGPA: "4.00",
-                            maxSKS: 24,
-                          });
-                          // Langsung alihkan ke Beranda dan buka Setup Awal
-                          onBackToHome?.();
-                          setTimeout(() => {
-                            onOpenOnboarding?.();
-                          }, 50);
-                        } else {
-                          alert("Gagal mengosongkan database.");
-                        }
-                      } catch (err) {
-                        alert("Terjadi kesalahan saat mereset data.");
+                    setIsResetting(true);
+                    try {
+                      if (onResetClean) {
+                        await onResetClean();
+                      } else {
+                        await fetch("/api/reset", { method: "POST" });
+                        try {
+                          localStorage.clear();
+                        } catch (e) {}
+                        onUpdateProfile?.({
+                          name: "Mahasiswa",
+                          nim: "",
+                          email: "",
+                          major: "",
+                          faculty: "",
+                          university: "",
+                          semester: 1,
+                          academicAdvisor: "",
+                          targetGPA: "4.00",
+                          maxSKS: 24,
+                        });
+                        onBackToHome?.();
+                        onOpenOnboarding?.();
                       }
+                    } catch (err) {
+                      console.error("Reset error:", err);
+                    } finally {
+                      setIsResetting(false);
                     }
                   }}
-                  className="px-4 py-2 rounded-xl bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-2 disabled:opacity-60"
                 >
-                  Kosongkan Seluruh Data / Reset Bersih
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>{isResetting ? "Mereset Database..." : "Kosongkan Seluruh Data / Reset Bersih"}</span>
                 </button>
               </div>
             </div>
